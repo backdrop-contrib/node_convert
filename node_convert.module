@@ -1,0 +1,196 @@
+<?php
+// $Id$
+
+/**
+ * Display help and module information
+ * @param section which section of the site we're displaying help
+ * @return help text for section
+ */
+function node_convert_help($section='') {
+
+  $output = '';
+
+  switch ($section) {
+    case "admin/help#node_convert":
+      $output = '<p>'. t("Converts a node type of a particular node") .'</p>';
+      break;
+  }
+
+  return $output;
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function node_convert_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+  }
+  else {
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      $items[] = array('path' => 'node/'. arg(1) .'/convert', 'title' => t('Convert'),
+          'callback' => 'node_convert_convert',
+          'callback arguments' => array(arg(1)),
+          'access' => user_access('administer content types'),
+          'weight' => 6,
+          'type' => MENU_LOCAL_TASK);
+    }
+  }
+  return $items;
+}
+
+function node_convert_convert($nid) {
+  $output .= drupal_get_form("node_convert_convert_form", $nid);
+  return $output;
+}
+
+function node_convert_convert_form($nid, $form_values = NULL) {
+  $form = array();
+  $node = node_load($nid);
+
+  /* Setting the steps */
+  if (!isset($form_values['step'])) {
+    $op = "choose_destination_type";
+  }
+  elseif ($form_values['step'] == "choose_destination_type") {
+    $op = "choose_destination_fields";
+  }
+
+  $form['step'] = array(
+    '#type' => 'hidden',
+    '#value' => $op,
+  );
+  $form['nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $nid,
+  );
+  /* Form steps */
+  if ($op == "choose_destination_type") {
+    $form['current_type'] = array('#type' => 'markup', '#value' => $node->type);
+    $types = array_keys(content_types());
+    $key = array_search($form['current_type']['#value'], $types);
+    if ($key !== false) unset($types[$key]);
+    foreach ($types as $value) $options[$value] = $value;
+    $form['destination_type'] = array('#type' => 'select', '#options' => $options, '#title' => t("To what content type should this node be converted"));
+  }
+  if ($op == "choose_destination_fields") {
+    $form['destination_type'] = array('#type' => 'hidden', '#value' => $form_values['destination_type']);
+    $source_fields = content_types($node->type);
+    $source_fields = $source_fields['fields'];
+    if (count($source_fields) == 0) {
+      $form['no_fields_flag'] = array('#type' => 'hidden', '#value' => 'true');
+      $form['no_fields'] = array('#type' => 'markup', '#value' => t("There are no cck fields to convert."));
+    }
+    else {
+      foreach ($source_fields as $field) {
+        $i++;
+        $options = array();
+        $dest_fields = content_types($form_values['destination_type']);
+        $dest_fields = $dest_fields['fields'];
+        $options['discard'] = 'discard';
+        foreach ($dest_fields as $value) if ($field['type'] == $value['type']) {
+          $options[$value['field_name']] = $value['field_name'];
+        }
+        $form['source_field_'. $i] = array('#type' => 'hidden', '#value' => $field['field_name']);
+        $form['dest_field_type_'. $i] = array('#type' => 'hidden', '#value' => $field['type']);
+        $form['dest_field_'. $i] = array('#type' => 'select', '#options' => $options, '#title' => $field['field_name'] ." ". t("should be inserted into"));
+        if ($field['type'] == "image") {
+          $temp_value = $node->{$field['field_name']}[0]['title'] ." ; ". $node->{$field['field_name']}[0]['filepath'];
+        }
+        elseif ($field['type'] == "nodereference") {
+          $temp_value = "nid: ". $node->{$field['field_name']}[0]['nid'];
+        }
+        elseif ($field['type'] == "userreference") {
+          $temp_value = "uid: ". $node->{$field['field_name']}[0]['uid'];
+        }
+        else $temp_value = $node->{$field['field_name']}[0]['value'];
+        if (empty($temp_value)) $temp_value = "NULL";
+        $form['current_field_value_' .$i] = array('#type' => 'markup', '#value' => '<div>'. t("Current value is:") ." <b>". $temp_value .'</b></div>') ;
+       
+      }
+    }
+  }
+
+  $form['#multistep'] = TRUE;
+  $form['#redirect'] = FALSE;
+  $form['submit'] = array('#type' => 'submit', '#value' => t("Submit"));
+
+  return $form;
+}
+
+function node_convert_convert_form_submit($form_id, $form_values) {
+
+  if ($form_values['step'] == "choose_destination_fields") {
+    $dest_node_type = $form_values['destination_type'];
+    $nid = $form_values['nid'];
+    $node = node_load($nid);
+    $vid = $node->vid;
+    $source_node_type = $node->type;
+    if ($form_values['no_fields_flag'] == false) {
+      foreach ($form_values as $key => $value) {
+        if (preg_match("/source_field_[0-9]+?/", $key) == 1) $source_fields[] = $value;
+        if (preg_match("/dest_field_[0-9]+?/", $key) == 1) $dest_fields[] = $value;
+        if (preg_match("/dest_field_type_[0-9]+?/", $key) == 1) $dest_fields_type[] = $value;
+      }
+    }
+    db_query("UPDATE {node} SET type = '%s' WHERE nid = %d", $dest_node_type, $nid);
+    db_query("INSERT INTO {%s} (nid, vid) VALUES (%d, %d)", "content_type_". $dest_node_type, $nid, $vid);
+    if ($form_values['no_fields_flag'] == false) {
+      foreach ($source_fields as $key => $field) {
+        
+        $db_info_source = content_database_info(content_fields($field));
+        if (strpos($db_info_source['table'], "content_field_") !== false) $db_source_content_field = true; else $db_source_content_field = false;
+        if ($dest_fields[$key] == "discard") {
+          if ($db_source_content_field == true) db_query("DELETE FROM {%s} WHERE nid = %d", $db_info_source['table'], $nid);
+          continue;
+        }
+        $db_info_dest = content_database_info(content_fields($dest_fields[$key]));
+        if (strpos($db_info_dest['table'], "content_field_") !== false) $db_dest_content_field = true; else $db_dest_content_field = false;
+        
+        if ($dest_fields_type[$key] == "image") {
+          $result = db_fetch_array(db_query("SELECT %s, %s, %s FROM {%s} WHERE nid = %d AND vid = %d", $field ."_fid", $field ."_title", $field ."_alt", "content_type_". $source_node_type, $nid, $vid));
+          $fid = $result[$field ."_fid"];
+          $title = $result[$field. "_title"];
+          $alt = $result[$field ."_alt"];
+          db_query("UPDATE {%s} SET %s = %d, %s = '%s', %s = '%s' WHERE nid = %d AND vid = %d", "content_type_". $dest_node_type, $dest_fields[$key] ."_fid", $fid, $dest_fields[$key] ."_title", $title, $dest_fields[$key] ."_alt", $alt, $nid, $vid);
+        }
+        elseif ($dest_fields_type[$key] == "nodereference") {
+          $field_data = db_result(db_query("SELECT %s FROM {%s} WHERE nid = %d AND vid = %d", $db_info_source['columns']['nid']['column'], $db_info_source['table'], $nid, $vid));
+          if ($db_source_content_field == true) db_query("DELETE FROM {%s} WHERE nid = %d", $db_info_source['table'], $nid);
+          if ($db_dest_content_field == true) {
+            db_query("INSERT INTO {%s} (nid, vid, %s) VALUES (%d, %d, %d)", $db_info_dest['table'], $db_info_dest['columns']['nid']['column'], $nid, $vid, $field_data);
+          }
+          else {
+            db_query("UPDATE {%s} SET %s = %d WHERE nid = %d AND vid = %d", $db_info_dest['table'], $db_info_dest['columns']['nid']['column'], $field_data, $nid, $vid);
+          }
+        }
+        elseif ($dest_fields_type[$key] == "userreference") {
+          $field_data = db_result(db_query("SELECT %s FROM {%s} WHERE nid = %d AND vid = %d", $db_info_source['columns']['uid']['column'], $db_info_source['table'], $nid, $vid));
+          if ($db_source_content_field == true) db_query("DELETE FROM {%s} WHERE nid = %d", $db_info_source['table'], $nid);
+          if ($db_dest_content_field == true) {
+            db_query("INSERT INTO {%s} (nid, vid, %s) VALUES (%d, %d, %d)", $db_info_dest['table'], $db_info_dest['columns']['uid']['column'], $nid, $vid, $field_data);
+          }
+          else {
+            db_query("UPDATE {%s} SET %s = %d WHERE nid = %d AND vid = %d", $db_info_dest['table'], $db_info_dest['columns']['uid']['column'], $field_data, $nid, $vid);
+          }
+        }
+        else {
+          $field_data = db_result(db_query("SELECT %s FROM {%s} WHERE nid = %d AND vid = %d", $field ."_value", "content_type_". $source_node_type, $nid, $vid));
+          db_query("UPDATE {%s} SET %s = '%s' WHERE nid = %d AND vid = %d", "content_type_". $dest_node_type, $dest_fields[$key] ."_value", $field_data, $nid, $vid);
+        }
+      }
+    }
+    db_query("DELETE FROM {%s} WHERE nid = %d", "content_type_". $source_node_type, $nid);
+    db_query("DELETE FROM {cache_content} WHERE cid = '%s'", "content:". $nid .":". $vid);
+    drupal_set_message("The current node type has been changed succesufuly");
+    //drupal_goto("node/". $nid);
+  }
+}
+
+function theme_node_convert_convert_form($form) {
+  $output = '';
+  if (isset($form['current_type'])) $output  .= '<div>'. t("The current node type is:") ." <b>". drupal_render($form['current_type']) .'</b></div>';
+  if (isset($form['no_fields'])) $output .= '<div>'.  drupal_render($form['no_fields']) .'</div>';
+  $output .= drupal_render($form);
+  return $output;
+}

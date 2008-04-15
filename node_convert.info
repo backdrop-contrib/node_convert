@@ -1,0 +1,4 @@
+; $Id$
+name = Node convert
+description = "A module that converts a node's type"
+dependencies = content

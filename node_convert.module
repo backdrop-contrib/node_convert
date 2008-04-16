@@ -12,7 +12,7 @@ function node_convert_help($section='') {
 
   switch ($section) {
     case "admin/help#node_convert":
-      $output = '<p>'. t("Converts a node type of a particular node") .'</p>';
+      $output = '<p>'. t("Converts a node's type to another type, also transfers cck field values") .'</p>';
       break;
   }
 

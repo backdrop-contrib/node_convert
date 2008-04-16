@@ -146,44 +146,52 @@ function node_convert_convert_form_submit($form_id, $form_values) {
         }
         $db_info_dest = content_database_info(content_fields($dest_fields[$key]));
         if (strpos($db_info_dest['table'], "content_field_") !== false) $db_dest_content_field = true; else $db_dest_content_field = false;
-        
-        if ($dest_fields_type[$key] == "image") {
-          $result = db_fetch_array(db_query("SELECT %s, %s, %s FROM {%s} WHERE nid = %d AND vid = %d", $field ."_fid", $field ."_title", $field ."_alt", "content_type_". $source_node_type, $nid, $vid));
-          $fid = $result[$field ."_fid"];
-          $title = $result[$field. "_title"];
-          $alt = $result[$field ."_alt"];
-          db_query("UPDATE {%s} SET %s = %d, %s = '%s', %s = '%s' WHERE nid = %d AND vid = %d", "content_type_". $dest_node_type, $dest_fields[$key] ."_fid", $fid, $dest_fields[$key] ."_title", $title, $dest_fields[$key] ."_alt", $alt, $nid, $vid);
+        $data = array();
+        $dest_column_names = array();
+        $source_column_names = array();
+        $column_placeholders = array();
+        $column_assignments = array();
+        foreach ($db_info_source['columns'] as $column => $attributes) {
+          $source_column_names[] = $attributes['column'];
         }
-        elseif ($dest_fields_type[$key] == "nodereference") {
-          $field_data = db_result(db_query("SELECT %s FROM {%s} WHERE nid = %d AND vid = %d", $db_info_source['columns']['nid']['column'], $db_info_source['table'], $nid, $vid));
-          if ($db_source_content_field == true) db_query("DELETE FROM {%s} WHERE nid = %d", $db_info_source['table'], $nid);
-          if ($db_dest_content_field == true) {
-            db_query("INSERT INTO {%s} (nid, vid, %s) VALUES (%d, %d, %d)", $db_info_dest['table'], $db_info_dest['columns']['nid']['column'], $nid, $vid, $field_data);
-          }
-          else {
-            db_query("UPDATE {%s} SET %s = %d WHERE nid = %d AND vid = %d", $db_info_dest['table'], $db_info_dest['columns']['nid']['column'], $field_data, $nid, $vid);
-          }
+        $source_values = db_fetch_array(db_query("SELECT ". implode(", ", $source_column_names) ." FROM {%s} WHERE nid = %d AND vid = %d", $db_info_source['table'], $nid, $vid));
+        $source_values = array_values($source_values);
+        if ($db_source_content_field == true) db_query("DELETE FROM {%s} WHERE nid = %d", $db_info_source['table'], $nid);
+        foreach ($db_info_dest['columns'] as $column => $attributes) {
+          $dest_column_names[] = $attributes['column'];
+          switch ($attributes['type']) {
+            case 'int':
+            case 'mediumint':
+            case 'tinyint':
+            case 'bigint':
+              $column_placeholders[] = '%d';
+              $column_assignments[] = $attributes['column'] .' = %d';
+              break;
+            case 'float':
+              $column_placeholders[] = '%f';
+              $column_assignments[] = $attributes['column'] .' = %f';
+              break;
+            default:
+              $column_placeholders[] = "'%s'";
+              $column_assignments[] = $attributes['column'] ." = '%s'";
+            }
         }
-        elseif ($dest_fields_type[$key] == "userreference") {
-          $field_data = db_result(db_query("SELECT %s FROM {%s} WHERE nid = %d AND vid = %d", $db_info_source['columns']['uid']['column'], $db_info_source['table'], $nid, $vid));
-          if ($db_source_content_field == true) db_query("DELETE FROM {%s} WHERE nid = %d", $db_info_source['table'], $nid);
-          if ($db_dest_content_field == true) {
-            db_query("INSERT INTO {%s} (nid, vid, %s) VALUES (%d, %d, %d)", $db_info_dest['table'], $db_info_dest['columns']['uid']['column'], $nid, $vid, $field_data);
-          }
-          else {
-            db_query("UPDATE {%s} SET %s = %d WHERE nid = %d AND vid = %d", $db_info_dest['table'], $db_info_dest['columns']['uid']['column'], $field_data, $nid, $vid);
-          }
+        if ($db_dest_content_field == true) {
+          $source_values[] = $nid;
+          $source_values[] = $vid;
+          $gg = db_query("INSERT INTO {". $db_info_dest['table'] ."} (". implode(", ", $dest_column_names) .", nid, vid) VALUES (". implode(', ', $column_placeholders) .", %d, %d)", $source_values);
         }
         else {
-          $field_data = db_result(db_query("SELECT %s FROM {%s} WHERE nid = %d AND vid = %d", $field ."_value", "content_type_". $source_node_type, $nid, $vid));
-          db_query("UPDATE {%s} SET %s = '%s' WHERE nid = %d AND vid = %d", "content_type_". $dest_node_type, $dest_fields[$key] ."_value", $field_data, $nid, $vid);
+          $source_values[] = $nid;
+          $source_values[] = $vid;
+          $gg = db_query("UPDATE {". $db_info_dest['table'] ."} SET " . implode(", ", $column_assignments) ." WHERE nid = %d AND vid = %d", $source_values);
         }
       }
     }
     db_query("DELETE FROM {%s} WHERE nid = %d", "content_type_". $source_node_type, $nid);
     db_query("DELETE FROM {cache_content} WHERE cid = '%s'", "content:". $nid .":". $vid);
     drupal_set_message("The current node type has been changed succesufuly");
-    //drupal_goto("node/". $nid);
+    drupal_goto("node/". $nid);
   }
 }
 

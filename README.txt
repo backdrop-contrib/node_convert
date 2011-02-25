@@ -1,4 +1,3 @@
-// $Id$
 Welcome to Node Convert.
 
 This module allows to convert one or many nodes between different node types.

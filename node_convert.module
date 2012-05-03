@@ -918,7 +918,14 @@ function node_convert_field_convert(&$node, $source_field, $dest_field) {
   // We add $source_values into the node object, and invoke field_storage write
   $field_ids = array($field_info_dest['id'] => $field_info_dest['id']);
   $langcode = field_language('node', $node, $source_field);
-  $node->{$dest_field}[$langcode] = $source_values;
+
+  // Make sure that we actually have values in the source field
+  if($source_values !== FALSE) {
+    $node->{$dest_field}[$langcode] = $source_values;
+  } else {
+    $node->{$dest_field} = array();
+  }
+
   // Give possibility to fields to pre-process their data
   // (e.g. Link module transforms attribute array into a serialized array before insertion)
   field_attach_presave('node', $node);

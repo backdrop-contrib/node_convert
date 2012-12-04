@@ -800,8 +800,12 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
 
     // Conversion process for each field
     $resave_body_field = FALSE;
+
+    // Use node revisions to extract all field revision in node_convert_field_convert
+    $node_revisions = node_revision_list($node);
+
     foreach ($source_fields as $key => $field) {
-      $replaced_body = node_convert_field_convert($node, $field, $dest_fields[$key]);
+      $replaced_body = node_convert_field_convert($node, $field, $dest_fields[$key], $dest_node_type, $node_revisions);
       if ($replaced_body == REPLACE_BODY) {
         $resave_body_field = TRUE; 
       }
@@ -856,18 +860,19 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
  *   A string containing the name of the source field which contains to be transferred information.
  * @param $dest_field
  *   A string containing the name of the destination field where the information should be stored.
+ * @param $dest_node_type
+ *   A string containing the destination node type of the node.
  * @return
  *   Returns REPLACE_BODY if something replaced the body field, or was appended to it.
  */
-function node_convert_field_convert(&$node, $source_field, $dest_field) {
+function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_node_type = '', $node_revisions = array()) {
   $field_info_source = field_info_fields(); // Get source field information
   $field_info_source = $field_info_source[$source_field];
   $db_info_source = $field_info_source['storage']; // Get DB specific source field information
 
   if ($dest_field == 'discard') {
     // Delete node info in the separate field table
-    $field_id = $field_info_source['id'];
-    module_invoke($db_info_source['module'], 'field_storage_delete', 'node', $node, array($field_id => $field_id));
+    node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node);
     return;
   }
 
@@ -876,14 +881,65 @@ function node_convert_field_convert(&$node, $source_field, $dest_field) {
     $field_info_dest = $field_info_dest[$dest_field]; // Get destination field information
     $db_info_dest = $field_info_dest['storage']; // Get DB specific destination field information
   }
-  
+
   $source_values = array();
-  // We save each field value from the DB for transfer.
+  // We save each field value from the DB for transfer. (this only applies to the current revision of the field)
   $source_values = field_get_items('node', $node, $source_field);
 
-  // After getting the source field values, we delete them in the DB
-  $field_id = $field_info_source['id'];
-  module_invoke($db_info_source['module'], 'field_storage_delete', 'node', $node, array($field_id => $field_id));
+  if (count($node_revisions) > 1) {
+    // Get all field revisions for current node
+    $field_revision_values = array();
+    $field_revision_source_table = current(array_keys($db_info_source['details']['sql']['FIELD_LOAD_REVISION']));
+    $field_revision_destination_table = current(array_keys($db_info_dest['details']['sql']['FIELD_LOAD_REVISION']));
+
+    $source_columns = array('entity_type', 'entity_id', 'revision_id', 'bundle', 'delta', 'language');
+    foreach ($field_info_source['columns'] as $column => $attributes) {
+      $source_columns[] = _field_sql_storage_columnname($source_field, $column);
+    }
+
+    $revision_query = db_select($field_revision_source_table, 'r', array('fetch' => PDO::FETCH_ASSOC))
+      ->condition('entity_type', 'node')
+      ->condition('bundle', $node->type)
+      ->condition('entity_id', $node->nid)
+      ->condition('revision_id', $node->vid, '<>')
+      ->fields('r', $source_columns)->execute();
+
+    /*$revision_query = db_query("SELECT * FROM {$field_revision_source_table}
+      WHERE entity_type = :type AND bundle = :bundle AND entity_id = :id AND revision_id != :revision",
+                               array(
+                                    ':type' => 'node',
+                                    ':bundle' => $node->type,
+                                    ':id' => $node->nid,
+                                    ':revision' => $node->vid
+                               ), array('fetch' => PDO::FETCH_ASSOC)
+    );*/
+
+    // Changer the bundle to the destination type of the node
+    foreach ($revision_query as $row) {
+      $row['bundle'] = $dest_node_type;
+      $field_revision_values[] = $row;
+    }
+
+    // Remove all field revisions for current field in DB
+    node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node);
+
+    // Reinsert the field revisions in the destination field revision table
+    $query = db_insert($field_revision_destination_table);
+    $columns = array('entity_type', 'entity_id', 'revision_id', 'bundle', 'delta', 'language');
+    foreach ($field_info_dest['columns'] as $column => $attributes) {
+      $columns[] = _field_sql_storage_columnname($dest_field, $column);
+    }
+    $query->fields($columns);
+    foreach ($field_revision_values as $row) {
+      $query->values(array_values($row));
+    }
+    $query->execute();
+
+  }
+  else {
+    // After getting the source field values, we delete the values stored in the DB (this deletes values for all field revisions)
+    node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node);
+  }
 
   // The source field value should be appended to the body or replaced.
   if ($dest_field == APPEND_TO_BODY || $dest_field == REPLACE_BODY) {
@@ -934,6 +990,11 @@ function node_convert_field_convert(&$node, $source_field, $dest_field) {
   } catch (Exception $e) {
       drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())));
   }
+}
+
+function node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node) {
+  $field_id = $field_info_source['id'];
+  module_invoke($db_info_source['module'], 'field_storage_delete', 'node', $node, array($field_id => $field_id));
 }
 
 /**

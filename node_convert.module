@@ -175,10 +175,6 @@ function node_convert_theme() {
 
 /* ----------- The forms ------------ */
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_conversion_form($form, $form_state, $node) {
   $form = array();
 
@@ -309,20 +305,12 @@ function node_convert_conversion_form($form, $form_state, $node) {
   return $form;
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_conversion_form_validate($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_fields') {
     module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type'], 'form_state' => $form_state), 'options validate');
   }
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_conversion_form_submit($form, &$form_state) {
   // Remember the destination type
   if ($form_state['values']['step'] == 'choose_destination_type') {
@@ -359,10 +347,6 @@ function node_convert_conversion_form_submit($form, &$form_state) {
   }
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function theme_node_convert_conversion_form($variables) {
   $form = $variables['form'];
   $output = '';
@@ -377,10 +361,6 @@ function theme_node_convert_conversion_form($variables) {
   return $output;
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_add_template($form, $form_state) {
   $form = array();
 
@@ -502,10 +482,6 @@ function node_convert_add_template($form, $form_state) {
   return $form;
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_add_template_validate($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_type') {
     if ($form_state['values']['source_type'] == $form_state['values']['dest_type']) {
@@ -519,10 +495,6 @@ function node_convert_add_template_validate($form, &$form_state) {
   }
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_add_template_submit($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_type') {
     $form_state['rebuild'] = TRUE;
@@ -578,11 +550,6 @@ function node_convert_add_template_submit($form, &$form_state) {
   }
 }
 
-
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function theme_node_convert_add_template($variables) {
   $form = $variables['form'];
   if ($form['step']['#value'] == "choose_destination_type") {
@@ -601,10 +568,6 @@ function theme_node_convert_add_template($variables) {
 
 /* ------------- Template adding, viewing, deleting. ----------------- */
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_templates() {
   $output = '';
   $rows = array();
@@ -618,10 +581,6 @@ function node_convert_templates() {
   return $output;
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_template_info($template_id) {
   $output = '';
   $rows = array();
@@ -646,10 +605,6 @@ function node_convert_template_info($template_id) {
   return $output;
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_template_delete_confirm($form, &$form_state, $template_id) {
   $form['template_id'] = array(
     '#type' => 'value',
@@ -672,10 +627,6 @@ function node_convert_template_delete_confirm($form, &$form_state, $template_id)
   );
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_template_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     db_delete('node_convert_templates')
@@ -702,10 +653,8 @@ function node_convert_template_delete_confirm_submit($form, &$form_state) {
 }
 
 
-/* The node_convert action */
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Implements hook_action, exposing predefined conversion templates as actions.
  */
 function node_convert_convert_action(&$node, &$context = array()) {
   if ($context['template'] === "0") {
@@ -732,10 +681,6 @@ function node_convert_convert_action(&$node, &$context = array()) {
   }
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_convert_action_form($context) {
   $result = db_query("SELECT * FROM {node_convert_templates}");
   $templates = array(0 => 'none');
@@ -759,10 +704,6 @@ function node_convert_convert_action_form($context) {
   return $form;
 }
 
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
 function node_convert_convert_action_submit($form, &$form_state) {
   return array('template' => $form_state['values']['template']);
 }
@@ -1044,8 +985,6 @@ function hook_node_convert_change($data, $op) {
       if ($book['bid'] == 'self') {
         $book['bid'] = $node->nid;
       }
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query("INSERT INTO {book} (nid, mlid, bid) VALUES (%d, %d, %d)", $node->nid, $book['mlid'], $book['bid']) */
       $id = db_insert('book')
   ->fields(array(
         'nid' => $node->nid,
@@ -1055,8 +994,6 @@ function hook_node_convert_change($data, $op) {
   ->execute();
     }
     if ($data['dest_node_type'] == 'forum') {
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('INSERT INTO {forum} (tid, vid, nid) VALUES (%d, %d, %d)', $data['hook_options']['forum'], $data['node']->vid, $data['node']->nid) */
       $id = db_insert('forum')
   ->fields(array(
         'tid' => $data['hook_options']['forum'],
@@ -1064,8 +1001,7 @@ function hook_node_convert_change($data, $op) {
         'nid' => $data['node']->nid,
       ))
   ->execute();
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('INSERT INTO {taxonomy_term_node} (tid, vid, nid) VALUES (%d, %d, %d)', $data['hook_options']['forum'], $data['node']->vid, $data['node']->nid) */
+
       $id = db_insert('taxonomy_term_node')
   ->fields(array(
         'tid' => $data['hook_options']['forum'],
@@ -1078,20 +1014,15 @@ function hook_node_convert_change($data, $op) {
   elseif ($op == 'delete') {
     if ($data['node']->type == 'book') {
       menu_link_delete($data['node']->book['mlid']);
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('DELETE FROM {book} WHERE mlid = %d', $data['node']->book['mlid']) */
       db_delete('book')
   ->condition('mlid', $data['node']->book['mlid'])
   ->execute();
     }
     if ($data['node']->type == 'forum') {
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('DELETE FROM {forum} WHERE nid = %d', $data['node']->nid) */
       db_delete('forum')
   ->condition('nid', $data['node']->nid)
   ->execute();
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('DELETE FROM {taxonomy_term_node} WHERE nid = %d', $data['node']->nid) */
+
       db_delete('taxonomy_term_node')
   ->condition('nid', $data['node']->nid)
   ->execute();

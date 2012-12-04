@@ -832,6 +832,7 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   }*/
   cache_clear_all('field:node:' . $node->nid, 'cache_field');
   $converted_node = node_load($nid, NULL, TRUE);
+  $converted_node->type = $dest_node_type;
   try {
     node_save($converted_node);
   }

@@ -1132,12 +1132,12 @@ function node_convert_get_field_value($node, $field) {
   elseif ($field['type'] == "taxonomy_term_reference") {
     $value = $field_values[0]['tid'];
   }
-  /* elseif ($field['type'] == "nodereference") {
+  elseif ($field['type'] == "node_reference") {
     $value = "nid: " . $field_values[0]['nid'];
   }
-  elseif ($field['type'] == "userreference") {
+  elseif ($field['type'] == "user_reference") {
     $value = "uid: " . $field_values[0]['uid'];
-  }*/
+  }
   else {
     if (!isset($field_values[0]['value'])) {
       $value = t("Unknown field format, can't display field value.");

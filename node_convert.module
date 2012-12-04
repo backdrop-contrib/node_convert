@@ -904,16 +904,6 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
       ->condition('revision_id', $node->vid, '<>')
       ->fields('r', $source_columns)->execute();
 
-    /* $revision_query = db_query("SELECT * FROM {$field_revision_source_table}
-      WHERE entity_type = :type AND bundle = :bundle AND entity_id = :id AND revision_id != :revision",
-                               array(
-                                    ':type' => 'node',
-                                    ':bundle' => $node->type,
-                                    ':id' => $node->nid,
-                                    ':revision' => $node->vid
-                               ), array('fetch' => PDO::FETCH_ASSOC)
-    );*/
-
     // Changer the bundle to the destination type of the node
     foreach ($revision_query as $row) {
       $row['bundle'] = $dest_node_type;

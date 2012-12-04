@@ -37,7 +37,7 @@ function node_convert_help($path, $arg) {
  */
 function node_convert_init() {
   // TODO Fix loading of includes that implement hook_node_convert_change.
-  /*foreach (array('book', 'forum', 'uc_product', 'panels_node') as $module) {
+  /* foreach (array('book', 'forum', 'uc_product', 'panels_node') as $module) {
     if (module_exists($module)) {
       module_load_include('node_convert.inc', 'node_convert', 'includes/' . $module);
     }
@@ -266,7 +266,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
           '#type' => 'select',
           '#options' => $options,
           '#default_value' => $source_field['field_name'],
-          '#title' => $source_field['field_name'] . " " . t("should be inserted into"),
+          '#title' => check_plain($source_field['field_name']) . " " . t("should be inserted into"),
         );
 
         // Print the current value of the source field
@@ -367,7 +367,7 @@ function theme_node_convert_conversion_form($variables) {
   $form = $variables['form'];
   $output = '';
   if (isset($form['current_type'])) {
-    $output  .= '<div>' . t("The current node type is:") . '<b>&nbsp;' . drupal_render($form['current_type']) . '</b></div>';
+    $output .= '<div>' . t("The current node type is:") . '<b>&nbsp;' . drupal_render($form['current_type']) . '</b></div>';
   }
   // If there are no fields to convert, we notify the user
   if (isset($form['no_fields']['#value']) && $form['no_fields']['#value'] == TRUE) {
@@ -793,7 +793,7 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   }
 
   // Change the node type in the DB
-  db_update('node')->fields(array('type' => $dest_node_type,))->condition('nid', $nid)->execute();
+  db_update('node')->fields(array('type' => $dest_node_type))->condition('nid', $nid)->execute();
 
   // If there are fields that can be converted
   if ($no_fields_flag == FALSE) {
@@ -831,7 +831,7 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   module_invoke_all('node_convert_change', $data, 'delete');
 
   // TODO Check what to do about token cache clearing.
-  /*if (module_exists('token')) {
+  /* if (module_exists('token')) {
     token_get_values('global', NULL, TRUE);
   }*/
   cache_clear_all('field:node:' . $node->nid, 'cache_field');
@@ -904,7 +904,7 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
       ->condition('revision_id', $node->vid, '<>')
       ->fields('r', $source_columns)->execute();
 
-    /*$revision_query = db_query("SELECT * FROM {$field_revision_source_table}
+    /* $revision_query = db_query("SELECT * FROM {$field_revision_source_table}
       WHERE entity_type = :type AND bundle = :bundle AND entity_id = :id AND revision_id != :revision",
                                array(
                                     ':type' => 'node',
@@ -976,9 +976,10 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
   $langcode = field_language('node', $node, $source_field);
 
   // Make sure that we actually have values in the source field
-  if($source_values !== FALSE) {
+  if ($source_values !== FALSE) {
     $node->{$dest_field}[$langcode] = $source_values;
-  } else {
+  }
+  else {
     $node->{$dest_field} = array();
   }
 
@@ -1198,7 +1199,7 @@ function node_convert_get_field_value($node, $field) {
   elseif ($field['type'] == "link_field") {
     $value = $field_values[0]['url'] . " ; " . $field_values[0]['title'];
   }
-  /*elseif ($field['type'] == "email") {
+  /* elseif ($field['type'] == "email") {
     $value = $field_values[0]['email'];
   }
   elseif ($field['type'] == "file_audio" || $field['type'] == "file_video") {
@@ -1210,7 +1211,7 @@ function node_convert_get_field_value($node, $field) {
   elseif ($field['type'] == "taxonomy_term_reference") {
     $value = $field_values[0]['tid'];
   }
-  /*elseif ($field['type'] == "nodereference") {
+  /* elseif ($field['type'] == "nodereference") {
     $value = "nid: " . $field_values[0]['nid'];
   }
   elseif ($field['type'] == "userreference") {
@@ -1219,7 +1220,8 @@ function node_convert_get_field_value($node, $field) {
   else {
     if (!isset($field_values[0]['value'])) {
       $value = t("Unknown field format, can't display field value.");
-    } else {
+    }
+    else {
       $value = $field_values[0]['value'];
     }
   }

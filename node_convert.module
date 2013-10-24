@@ -917,6 +917,11 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
   // Give possibility to fields to pre-process their data
   // (e.g. Link module transforms attribute array into a serialized array before insertion)
   field_attach_presave('node', $node);
+  // For some reason link_field_presave doesn't exist anymore, so we have to call it the processing function used inside manually.
+  if ($field_info_dest['type'] == 'link_field') {
+    $instances = field_info_instances('node', $dest_node_type);
+    link_field_update('node', $node, $field_info_dest, $instances[$dest_field], $langcode, $node->{$dest_field}[$langcode]);
+  }
   try {
     module_invoke($db_info_dest['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_INSERT, $field_ids);
   } catch (Exception $e) {

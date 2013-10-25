@@ -22,3 +22,58 @@ function node_convert_rules_event_info() {
     ),
   );
 }
+
+/**
+ * Implements hook_rules_action_info().
+ * @ingroup rules
+ */
+
+function node_convert_rules_action_info() {
+  $actions = array();
+  $actions['node_convert_convert_nodes_using_template_rules_callback'] = array(
+    'label' => t('Convert a node'),
+    'group' => t('Node'),
+    'parameter' => array(
+      'template' => array(
+        'type' => 'text',
+        'label' => t('Select the Convert Template you wish to use.'),
+        'options list' => 'node_convert_templates_list',
+      ),
+      'node' => array(
+        'type' => 'node',
+        'label' => t('Node to convert'),
+      ),
+    ),
+  );
+  return $actions;
+}
+
+/**
+ * Takes rules action parameters and passes them to the convert function.
+ *
+ * @param $template
+ *   The template id to use for conversion.
+ * @param $node
+ *   Full node object
+ * @return bool FALSE if conversion fails, this is return of convert function.
+ */
+function node_convert_convert_nodes_using_template_rules_callback($template, $node){
+  return node_convert_convert_nodes_using_template(array($node->nid), $template);
+}
+
+/**
+ * Helper - Gets a list of templates and id's.
+ *
+ * @return array A associated array of template id's and names.
+ */
+function node_convert_templates_list() {
+  $result = db_query("SELECT * FROM {node_convert_templates}");
+  $templates = array(0 => 'none');
+  foreach ($result as $row) {
+    $access = node_convert_check_template_permission_user(array('template_id' => $row->nctid));
+    if ($access == TRUE) {
+      $templates[$row->nctid] = $row->name;
+    }
+  }
+  return $templates;
+}

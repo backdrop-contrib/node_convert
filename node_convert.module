@@ -10,6 +10,7 @@
 
 define("APPEND_TO_BODY", 'append_to_body');
 define("REPLACE_BODY", 'replace_body');
+define('NODE_CONVERT_TEMPLATE_TABLE', 'node_convert_templates');
 
 /**
  * Implements hook_help().
@@ -131,14 +132,14 @@ function node_convert_menu() {
  */
 function node_convert_node_operations() {
   $operations = array();
-  $result = db_query("SELECT name, nctid FROM {node_convert_templates}");
-  foreach ($result as $row) {
-    $access = node_convert_check_template_permission_user(array('template_id' => $row->nctid));
+  $templates = node_convert_load_all_templates();
+  foreach ($templates as $row) {
+    $access = node_convert_check_template_permission_user(array('template_id' => $row->machine_name));
     if ($access) {
-      $operations['node_convert_' . $row->nctid] = array(
+      $operations['node_convert_' . $row->machine_name] = array(
         'label' => 'Convert template: ' . $row->name,
         'callback' => 'node_convert_convert_nodes_using_template',
-        'callback arguments' => array($row->nctid),
+        'callback arguments' => array($row->machine_name),
       );
     }
   }
@@ -386,6 +387,15 @@ function node_convert_add_template($form, $form_state) {
         '#title' => t("Template name"),
         '#required' => TRUE,
       );
+      $form['machine_name'] = array(
+        '#type' => 'machine_name',
+        '#title' => t('Machine name'),
+        '#machine_name' => array(
+          'exists' => 'node_convert_machine_name_check',
+          'source' => array('template_name'),
+        ),
+        '#required' => TRUE,
+      );
       $form['source_type'] = array(
         '#type' => 'select',
         '#title' => t("Source type"),
@@ -499,6 +509,7 @@ function node_convert_add_template_submit($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_type') {
     $form_state['rebuild'] = TRUE;
     $form_state['storage']['template_name'] = $form_state['values']['template_name'];
+    $form_state['storage']['machine_name'] = $form_state['values']['machine_name'];
     $form_state['storage']['source_type'] = $form_state['values']['source_type'];
     $form_state['storage']['dest_type'] = $form_state['values']['dest_type'];
     $form_state['storage']['create_action'] = $form_state['values']['create_action'];
@@ -531,13 +542,16 @@ function node_convert_add_template_submit($form, &$form_state) {
     );
     $data = serialize($data);
     $id = db_insert('node_convert_templates')
-  ->fields(array(
+    ->fields(array(
       'name' => $form_state['storage']['template_name'],
+      'machine_name' => $form_state['storage']['machine_name'],
       'source_type' => $form_state['storage']['source_type'],
       'destination_type' => $form_state['storage']['dest_type'],
       'data' => $data,
-    ))
-  ->execute();
+      ))
+    ->execute();
+    ctools_include('export');
+    ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
     drupal_set_message(t("Template created successfully."));
 
     if ($form_state['storage']['create_action'] == 1) {
@@ -571,23 +585,31 @@ function theme_node_convert_add_template($variables) {
 function node_convert_templates() {
   $output = '';
   $rows = array();
-  $headers = array(t("Name"), t("Source type"), t("Dest type"), t("Delete"));
-  $result = db_query("SELECT * FROM {node_convert_templates} ORDER BY nctid");
-  foreach ($result as $row) {
-    $rows[$row->nctid] = array(l($row->name, 'admin/structure/node_convert_templates/' . $row->nctid), $row->source_type, $row->destination_type, l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row->nctid));
+  $headers = array(t("Name"), t('Machine name'), t("Source type"), t("Dest type"), t("Delete"));
+  $templates = node_convert_load_all_templates();
+  foreach ($templates as $row) {
+    $can_delete = isset($row->nctid);
+    $name = l($row->name, 'admin/structure/node_convert_templates/' . $row->machine_name);
+    $operations = array();
+    if ($can_delete) {
+      $operations = l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row->nctid);
+    }
+    $rows[] = array($name, $row->machine_name, $row->source_type, $row->destination_type, $operations);
   }
   $output = theme('table', array('header' => $headers, 'rows' => $rows));
 
   return $output;
 }
 
-function node_convert_template_info($template_id) {
+function node_convert_template_info($machine_name) {
   $output = '';
   $rows = array();
   $headers = array(t("Property"), t("Value"));
-  $row = node_convert_load_template($template_id);
-  $rows[] = array(t("Template id"), $row['nctid']);
+  $row = node_convert_load_template($machine_name);
+  $template_id = isset($row['nctid']) ? $row['nctid'] : t('In Code');
+  $rows[] = array(t("Template id"), $template_id);
   $rows[] = array(t("Name"), $row['name']);
+  $rows[] = array(t("Machine name"), $row['machine_name']);
   $rows[] = array(t("Source type"), $row['source_type']);
   $rows[] = array(t("Destination type"), $row['destination_type']);
   $data = $row['data'];
@@ -629,9 +651,11 @@ function node_convert_template_delete_confirm($form, &$form_state, $template_id)
 
 function node_convert_template_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    db_delete('node_convert_templates')
-    ->condition('nctid', $form_state['values']['template_id'])
-    ->execute();
+    ctools_include('export');
+    $template = ctools_export_load_object(NODE_CONVERT_TEMPLATE_TABLE, 'conditions', array('nctid' => $form_state['values']['template_id']));
+    $template = array_shift($template);
+    node_convert_delete_template($template);
+
     if ($form_state['values']['delete_action'] == 1) {
       db_delete('actions')
       ->condition('callback', 'node_convert_convert_action')
@@ -1165,15 +1189,67 @@ function node_convert_get_field_value($node, $field) {
  *
  * @param $template_id
  *   The template id to use
- * @return
- *    An array containing the template information or FALSE if there is no such template
+ * @return array An array containing the template information or FALSE if there is no such template
  */
 function node_convert_load_template($template_id) {
-  $template = db_query("SELECT * FROM {node_convert_templates} WHERE nctid = :nctid", array(':nctid' => $template_id))->fetchAssoc();
-  if (is_array($template)) {
-    $template['data'] = unserialize($template['data']);
+  // Use Ctools export API to fetch all presets from the DB as well as code.
+  ctools_include('export');
+  if ($template_id) {
+    $conditions = array();
+    if (is_numeric($template_id)) {
+      $conditions['nctid'] = $template_id;
+    }
+    elseif (is_string($template_id)) {
+      $conditions['machine_name'] = $template_id;
+    }
+    $templates = ctools_export_load_object(NODE_CONVERT_TEMPLATE_TABLE, 'conditions', $conditions);
+    $template = !empty($templates) ? array_shift($templates) : FALSE;
+    if (is_string($template->data)) {
+      $template->data = unserialize($template->data);
+    }
+    $template = (array) $template;
+    return $template;
   }
-  return $template;
+  return FALSE;
+}
+
+/*
+ * Loads all templates.
+ */
+function node_convert_load_all_templates() {
+  ctools_include('export');
+  $templates = ctools_export_load_object(NODE_CONVERT_TEMPLATE_TABLE, 'all');
+  return $templates;
+}
+
+/**
+ * Delete a conversion template.
+ * This function is also called by ctools export when calls are
+ * made through ctools_export_crud_delete().
+ *
+ * @param $template
+ *   A conversion template.
+ * @param $ctools_crud
+ *  Is this function called by the ctools crud delete.
+ */
+function node_convert_delete_template($template, $ctools_crud = TRUE) {
+  $query = db_delete('node_convert_templates');
+
+  if (is_object($template) && isset($template->nctid)) {
+    $query->condition('nctid', $template->nctid);
+  }
+  elseif (is_array($template) && isset($template['template_id'])) {
+    $query->condition('nctid', $template['template_id']);
+  }
+  elseif (is_string($template)) {
+    $template_name = $template;
+    $query->condition('machine_name', $template_name);
+  }
+
+  $query->execute();
+
+  ctools_include('export');
+  ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
 }
 
 /**
@@ -1235,5 +1311,43 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
       // We display errors if there are any, or the default success message
       node_convert_messages($result, array('nid' => $nid));
     }
+  }
+}
+
+function node_convert_machine_name_check($machine_name) {
+  $query = db_select(NODE_CONVERT_TEMPLATE_TABLE, 'n');
+  $query->addField('n', 'nctid');
+  $query->condition('machine_name', $machine_name);
+  $template = $query->execute()->fetchAssoc();
+  return $template;
+}
+
+
+/**
+ * Utility function to recreate identifiers.
+ */
+function _node_convert_recreate_identifiers() {
+  // Migrate the conversion templates so they have a unique identifier.
+  $result = db_select(NODE_CONVERT_TEMPLATE_TABLE, 'n')
+    ->fields('n')
+    ->execute();
+  $rows = array();
+  foreach($result as $row) {
+    $row->machine_name = $row->source_type . '_to_' . $row->destination_type . '_' . $row->nctid;
+    $rows[] = $row;
+  }
+  foreach ($rows as $row) {
+    drupal_write_record(NODE_CONVERT_TEMPLATE_TABLE, $row, array('nctid'));
+  }
+}
+
+/**
+ * Implementation of hook_ctools_plugin_api().
+ *
+ * Tell CTools that we support the default_node_convert_templates API.
+ */
+function node_convert_ctools_plugin_api($owner, $api) {
+  if ($owner == 'node_convert' && $api == 'default_node_convert_templates') {
+    return array('version' => 1);
   }
 }

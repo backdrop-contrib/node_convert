@@ -16,9 +16,7 @@ function node_convert_rules_event_info() {
       'label' => t('Content has been converted'),
       'module' => 'node',
       'group' => t('Node'),
-      'variables' => array(
-        'node' => array('type' => 'node', 'label' => t('Converted node')),
-      ),
+      'variables' => rules_events_node_variables(t('Converted node')),
     ),
   );
 }

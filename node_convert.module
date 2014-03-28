@@ -887,7 +887,7 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
       ->condition('revision_id', $node->vid, '<>')
       ->fields('r', $source_columns)->execute();
 
-    // Changer the bundle to the destination type of the node
+    // Change the bundle to the destination type of the node
     foreach ($revision_query as $row) {
       $row['bundle'] = $dest_node_type;
       $field_revision_values[] = $row;

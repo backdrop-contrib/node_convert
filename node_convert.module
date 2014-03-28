@@ -11,6 +11,7 @@
 define("APPEND_TO_BODY", 'append_to_body');
 define("REPLACE_BODY", 'replace_body');
 define('NODE_CONVERT_TEMPLATE_TABLE', 'node_convert_templates');
+define('NODE_CONVERT_WATCHDOG', 'node_convert');
 
 /**
  * Implements hook_help().
@@ -819,13 +820,15 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   $converted_node->type = $dest_node_type;
   try {
     node_save($converted_node);
+
+    if (module_exists('rules')) {
+      rules_invoke_event('node_convert_converted_node', $converted_node);
+    }
+
   }
   catch (Exception $e) {
-      drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())), 'error');
-  }
-  
-  if (module_exists('rules')) {
-    rules_invoke_event('node_convert_converted_node', $converted_node);
+    drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())), 'error');
+    $nid = FALSE;
   }
 
   return $nid;
@@ -987,12 +990,21 @@ function node_convert_invoke_field_storage_delete($field_info_source, $db_info_s
  */
 function node_convert_messages($result, $params = array()) {
   $params += array('display_success' => TRUE);
+
+  $message_arguments = array('@nid' => $params['nid']);
   if ($result == FALSE) {
-    drupal_set_message(t("Conversion failed. Node nid @nid doesn't exist.", array('@nid' => $params['nid'])), 'error');
+    $message = "Conversion failed for node nid @nid.";
+
+    watchdog(NODE_CONVERT_WATCHDOG, $message, $message_arguments, WATCHDOG_ERROR);
+    drupal_set_message(t($message, $message_arguments), 'error');
   }
   elseif ($params['display_success'] == TRUE) {
-    drupal_set_message(t("Node @nid has been converted successfully.", array('@nid' => $params['nid'])));
+    $message = 'Node @nid has been converted successfully.';
+
+    drupal_set_message(t($message, $message_arguments));
+    watchdog(NODE_CONVERT_WATCHDOG, $message, $message_arguments, WATCHDOG_INFO);
   }
+
 }
 
 /**

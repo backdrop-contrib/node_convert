@@ -34,15 +34,15 @@ function node_convert_help($path, $arg) {
 }
 
 /**
- * Implements hook_init().
+ * Loads includes that execute various behavior on node conversion.
  */
-function node_convert_init() {
+function node_convert_load_includes() {
   // TODO Fix loading of includes that implement hook_node_convert_change.
-  /* foreach (array('book', 'forum', 'uc_product', 'panels_node') as $module) {
+  foreach (array('xmlsitemap') as $module) {
     if (module_exists($module)) {
       module_load_include('node_convert.inc', 'node_convert', 'includes/' . $module);
     }
-  }*/
+  }
 }
 
 /**
@@ -281,6 +281,8 @@ function node_convert_conversion_form($form, $form_state, $node) {
         '#type' => 'value',
         '#value' => $no_fields,
     );
+
+    node_convert_load_includes();
     $hook_options = module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type']), 'options');
     if (!empty($hook_options)) {
       $form['hook_options'] = $hook_options;
@@ -308,6 +310,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
 
 function node_convert_conversion_form_validate($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_fields') {
+    node_convert_load_includes();
     module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type'], 'form_state' => $form_state), 'options validate');
   }
 }
@@ -466,6 +469,8 @@ function node_convert_add_template($form, $form_state) {
         '#type' => 'value',
         '#value' => $no_fields,
     );
+
+    node_convert_load_includes();
     // All node specific form options needed for types like book, forum, etc. are done here
     $hook_options = module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['dest_type']), 'options');
     if (!empty($hook_options)) {
@@ -501,6 +506,7 @@ function node_convert_add_template_validate($form, &$form_state) {
   }
   // All node specific form validations needed for types like book, forum, etc. are done here
   elseif ($form_state['values']['step'] == 'choose_destination_fields') {
+    node_convert_load_includes();
     module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['dest_type'], 'form_state' => $form_state), 'options validate');
   }
 }
@@ -791,7 +797,9 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   if (!empty($hook_options)) {
     $data['hook_options'] = $hook_options;
   }
+
   // We make sure that all custom node modules do their changes at the appropriate steps
+  node_convert_load_includes();
   module_invoke_all('node_convert_change', $data, 'insert');
   module_invoke_all('node_convert_change', $data, 'delete');
 
@@ -1000,7 +1008,7 @@ function node_convert_messages($result, $params = array()) {
  *    Should return a FAPI array only when using the options operation.
  */
 function hook_node_convert_change($data, $op) {
-  // All of this is just an example, there real data is being called from hook_init
+  // All of this is just an example.
   if ($op == 'insert') {
     if ($data['dest_node_type'] == 'book') {
       $book = array();

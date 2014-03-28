@@ -257,9 +257,15 @@ function node_convert_conversion_form($form, $form_state, $node) {
           '#type' => 'value',
           '#value' => $source_field['field_name'],
         );
+
+        $form['container_' . $i] = array(
+          '#type' => 'container',
+          '#suffix' => '<br />'
+        );
+
         // The select populated with possible destination fields for each source field
         // If the destination node type has the same field as the source node type, the default value is set to it.
-        $form['dest_field_' . $i] = array(
+        $form['container_' . $i]['dest_field_' . $i] = array(
           '#type' => 'select',
           '#options' => $options,
           '#default_value' => $source_field['field_name'],
@@ -268,7 +274,8 @@ function node_convert_conversion_form($form, $form_state, $node) {
 
         // Print the current value of the source field
         $temp_value = node_convert_get_field_value($node, $fields_info[$source_field_name]);
-        $form['current_field_value_' . $i] = array(
+        $form['container_' . $i]['current_field_value_' . $i] = array(
+          '#type' => 'item',
           '#markup' => '<div>' . t("Current value is:") . " <b>" . $temp_value . '</b></div>',
         );
       }
@@ -1150,33 +1157,32 @@ function node_convert_return_access_node_types($direction) {
  */
 function node_convert_get_field_value($node, $field) {
   $value = '';
+
+  /* @var $field_values Array*/
   $field_values = field_get_items('node', $node, $field['field_name']);
-  if ($field['type'] == "image") {
-    $value = $field_values[0]['title'] . " ; " . $field_values[0]['uri'];
+  if ($field['type'] == 'image') {
+    $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'title', 'uri'));
   }
-  elseif ($field['type'] == "link_field") {
-    $value = $field_values[0]['url'] . " ; " . $field_values[0]['title'];
+  elseif ($field['type'] == 'link_field') {
+    $value = node_convert_format_field_value($field_values, 'Link', 'Links', array('url', 'title'));
   }
   /* elseif ($field['type'] == "email") {
     $value = $field_values[0]['email'];
-  }
-  elseif ($field['type'] == "file_audio" || $field['type'] == "file_video") {
-    $value = $field_values[0]['filename'] . " " . $field_values[0]['filemime'] . " " . $field_values[0]['filesize'] . " " . t("bytes");
   }*/
-  elseif ($field['type'] == "file") {
-    $value = $field_values[0]['fid'] . " ; " . $field_values[0]['uri'];
+  elseif ($field['type'] == 'file') {
+    $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'uri'));
   }
-  elseif ($field['type'] == "taxonomy_term_reference") {
-    $value = $field_values[0]['tid'];
+  elseif ($field['type'] == 'taxonomy_term_reference') {
+    $value = node_convert_format_field_value($field_values, 'Term ID', 'Term IDs', array('tid'));
   }
-  elseif ($field['type'] == "node_reference") {
-    $value = "nid: " . $field_values[0]['nid'];
+  elseif ($field['type'] == 'node_reference') {
+    $value = node_convert_format_field_value($field_values, 'Node ID', 'Node IDs', array('nid'));
   }
-  elseif ($field['type'] == "user_reference") {
-    $value = "uid: " . $field_values[0]['uid'];
+  elseif ($field['type'] == 'user_reference') {
+    $value = node_convert_format_field_value($field_values, 'User ID', 'User IDs', array('uid'));
   }
-  elseif ($field['type'] == "entityreference") {
-    $value = "entity type: " . $field['settings']['target_type'] . " id: " . $field_values[0]['target_id'];
+  elseif ($field['type'] == 'entityreference') {
+    $value = node_convert_format_field_value($field_values, 'Entity ID', 'Entity IDs', array('target_id'), 'Entity Type: ' . $field['settings']['target_type']);
   }
   else {
     if (!isset($field_values[0]['value'])) {
@@ -1191,6 +1197,35 @@ function node_convert_get_field_value($node, $field) {
   }
   return $value;
 }
+
+/**
+ * @param $field
+ * @param $field_values
+ * @return string
+ */
+function node_convert_format_field_value($field_values, $singular_label, $plural_label, $columns, $prefix_label = '') {
+  $output = '';
+  if (!empty($prefix_label)) {
+    $output .= $prefix_label . ' ; ';
+  }
+
+  $count = count($field_values);
+  $label = format_plural($count, $singular_label, $plural_label, array());
+
+  $items = array();
+  foreach ($field_values as $item) {
+    $column_values = array();
+
+    foreach ($columns as $column) {
+      $column_values[] = $item[$column];
+    }
+    $items[] = implode(' ', $column_values);
+
+  }
+  $output .= $label . ': ' . implode(', ', $items);
+  return $output;
+}
+
 
 /**
  * Loads a conversion template array using template_id.

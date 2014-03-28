@@ -41,7 +41,8 @@ function node_convert_load_includes() {
   // TODO Fix loading of includes that implement hook_node_convert_change.
   foreach (array('xmlsitemap') as $module) {
     if (module_exists($module)) {
-      module_load_include('node_convert.inc', 'node_convert', 'includes/' . $module);
+      $include_folder = 'modules';
+      module_load_include('node_convert.inc', 'node_convert',  $include_folder . '/' . $module);
     }
   }
 }

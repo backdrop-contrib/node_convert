@@ -35,7 +35,7 @@ function node_convert_rules_action_info() {
       'template' => array(
         'type' => 'text',
         'label' => t('Select the Convert Template you wish to use.'),
-        'options list' => 'node_convert_templates_list',
+        'options list' => 'node_convert_rules_template_list',
       ),
       'node' => array(
         'type' => 'node',
@@ -64,14 +64,11 @@ function node_convert_convert_nodes_using_template_rules_callback($template, $no
  *
  * @return array A associated array of template id's and names.
  */
-function node_convert_templates_list() {
-  $result = db_query("SELECT * FROM {node_convert_templates}");
-  $templates = array(0 => 'none');
-  foreach ($result as $row) {
-    $access = node_convert_check_template_permission_user(array('template_id' => $row->nctid));
-    if ($access == TRUE) {
-      $templates[$row->nctid] = $row->name;
-    }
+function node_convert_rules_template_list() {
+  $template_objects = node_convert_load_all_templates();
+  $templates = array();
+  foreach ($template_objects as $template) {
+    $templates[$template->machine_name] = $template->name;
   }
   return $templates;
 }

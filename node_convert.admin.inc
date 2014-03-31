@@ -10,16 +10,17 @@
 function node_convert_templates() {
   $output = '';
   $rows = array();
-  $headers = array(t("Name"), t('Machine name'), t("Source type"), t("Dest type"), t("Delete"));
+  $headers = array(t("Name"), t('Machine name'), t("Source type"), t("Dest type"), t("Operations"));
   $templates = node_convert_load_all_templates();
   foreach ($templates as $row) {
     $can_delete = isset($row->nctid);
     $name = l($row->name, 'admin/structure/node_convert_templates/' . $row->machine_name);
     $operations = array();
     if ($can_delete) {
-      $operations = l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row->nctid);
+      $operations[] = l(t("Edit"), 'admin/structure/node_convert_templates/edit/' . $row->nctid);
+      $operations[] = l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row->nctid);
     }
-    $rows[] = array($name, $row->machine_name, $row->source_type, $row->destination_type, $operations);
+    $rows[] = array($name, $row->machine_name, $row->source_type, $row->destination_type, implode(' ', $operations));
   }
   $output = theme('table', array('header' => $headers, 'rows' => $rows));
 
@@ -102,8 +103,15 @@ function node_convert_template_delete_confirm_submit($form, &$form_state) {
 }
 
 
-function node_convert_add_template($form, $form_state) {
+function node_convert_add_template($form, &$form_state, $template = NULL) {
   $form = array();
+
+  // @TODO Figure out how to let a user edit templates that are stored in code via features.
+  $is_editing_mode = FALSE;
+  if (!empty($template)) {
+    $is_editing_mode = TRUE;
+    $form_state['storage']['is_editing_mode'] = $is_editing_mode;
+  }
 
   /* Setting the steps */
   if (!isset($form_state['values']['step'])) {
@@ -151,6 +159,18 @@ function node_convert_add_template($form, $form_state) {
         '#title' => t("Create action?"),
         '#description' => t("If the option is checked, an action named Convert *Template name* will be created."),
       );
+
+      if ($is_editing_mode) {
+        $form['template_name']['#default_value'] = $template['name'];
+        $form['machine_name']['#default_value'] = $template['machine_name'];
+        $form['machine_name']['#disabled'] = TRUE;
+        $form['source_type']['#default_value'] = $template['source_type'];
+        $form['dest_type']['#default_value'] = $template['destination_type'];
+
+        // @TODO Fix action when editing.
+        $form['create_action']['#access'] = FALSE;
+      }
+
     }
     else {
       $form['no_types'] = array(
@@ -196,6 +216,16 @@ function node_convert_add_template($form, $form_state) {
           '#options' => $options,
           '#title' => $source_field['field_name'] . " " . t("should be inserted into"),
         );
+
+        if ($is_editing_mode) {
+          // Populate the previous fields, only if the selected node types haven't changed from the original ones.
+          $source_type = $form_state['values']['source_type'];
+          $destination_type = $form_state['values']['dest_type'];
+          if ($source_type == $template['source_type'] && $destination_type == $template['destination_type']) {
+            $form['dest_field_' . $i]['#default_value'] = $template['data']['fields']['destination'][$i - 1];
+          }
+        }
+
       }
       $form['number_of_fields'] = array(
         '#type' => 'value',
@@ -223,9 +253,10 @@ function node_convert_add_template($form, $form_state) {
     );
   }
   elseif ($op == "choose_destination_fields") {
+    $submit_label = $is_editing_mode ? t('Update') : t('Create');
     $form['submit'] = array(
       '#type' => 'submit',
-      '#value' => t("Create"),
+      '#value' => $submit_label,
       '#weight' => 100,
     );
   }
@@ -282,20 +313,28 @@ function node_convert_add_template_submit($form, &$form_state) {
       'no_fields' => $no_fields,
     );
     $data = serialize($data);
-    $id = db_insert('node_convert_templates')
-      ->fields(array(
-        'name' => $form_state['storage']['template_name'],
-        'machine_name' => $form_state['storage']['machine_name'],
-        'source_type' => $form_state['storage']['source_type'],
-        'destination_type' => $form_state['storage']['dest_type'],
-        'data' => $data,
-      ))
-      ->execute();
+
+    $is_editing_mode = isset($form_state['storage']['is_editing_mode']);
+    $id = node_convert_save_template(
+      $form_state['storage']['template_name'],
+      $form_state['storage']['machine_name'],
+      $form_state['storage']['source_type'],
+      $form_state['storage']['dest_type'],
+      $data,
+      $is_editing_mode
+    );
+
     ctools_include('export');
     ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
-    drupal_set_message(t("Template created successfully."));
+    if ($is_editing_mode) {
+      drupal_set_message(t("Template updated successfully."));
+    }
+    else {
+      drupal_set_message(t("Template created successfully."));
+    }
 
-    if ($form_state['storage']['create_action'] == 1) {
+    // @TODO Fix being able to create action when editing. Need to find template_id.
+    if ($form_state['storage']['create_action'] == 1 && !$is_editing_mode) {
       $template_id = $id;
       actions_save('node_convert_convert_action', 'node', array('template' => $template_id), 'Convert ' . $form_state['storage']['template_name'], NULL);
     }

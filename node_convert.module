@@ -116,6 +116,15 @@ function node_convert_menu() {
     'file' => NODE_CONVERT_ADMIN_INC,
   );
 
+  $items['admin/structure/node_convert_templates/edit/%node_convert_template'] = array(
+    'title' => 'Edit template',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('node_convert_add_template', 4),
+    'access arguments' => array('administer conversion'),
+    'type' => MENU_CALLBACK,
+    'file' => NODE_CONVERT_ADMIN_INC,
+  );
+
   $items['admin/structure/node_convert_templates/delete/%'] = array(
     'title' => 'Delete template',
     'page callback' => 'drupal_get_form',
@@ -126,6 +135,20 @@ function node_convert_menu() {
   );
 
   return $items;
+}
+
+/**
+ * This is a wildcard loader for the menu item for template editing.
+ *
+ * @param $id
+ * @return array|int
+ */
+function node_convert_template_load($id) {
+  $template = node_convert_load_template($id);
+  if (empty($template)) {
+    return MENU_NOT_FOUND;
+  }
+  return $template;
 }
 
 /**
@@ -325,8 +348,10 @@ function node_convert_load_template($template_id) {
     if (is_string($template->data)) {
       $template->data = unserialize($template->data);
     }
-    $template = (array) $template;
-    return $template;
+    if (!empty($template)) {
+      $template = (array) $template;
+      return $template;
+    }
   }
   return FALSE;
 }
@@ -368,6 +393,35 @@ function node_convert_delete_template($template, $ctools_crud = TRUE) {
 
   ctools_include('export');
   ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
+}
+
+function node_convert_save_template($template_name, $machine_name, $source_type, $destination_type, $data, $is_editing_mode = FALSE) {
+  $result = NULL;
+  if (!$is_editing_mode) {
+    $id = db_insert(NODE_CONVERT_TEMPLATE_TABLE)
+      ->fields(array(
+        'name' => $template_name,
+        'machine_name' => $machine_name,
+        'source_type' => $source_type,
+        'destination_type' => $destination_type,
+        'data' => $data,
+      ))
+      ->execute();
+    $result = $id;
+  }
+  else {
+    $rows_affected = db_update(NODE_CONVERT_TEMPLATE_TABLE)
+      ->fields(array(
+        'name' => $template_name,
+        'source_type' => $source_type,
+        'destination_type' => $destination_type,
+        'data' => $data,
+      ))
+      ->condition('machine_name', $machine_name)
+      ->execute();
+    $result = $rows_affected;
+  }
+  return $result;
 }
 
 /**

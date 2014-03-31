@@ -4,6 +4,28 @@
  * API documentation for the node_convert module.
  */
 
+/**
+ * Provide implementation of hook_ctools_plugin_api().
+ *
+ * This will tell CTools which file contains the implementation of hook_node_convert_change().
+ * The conversion hook will not execute without first defining the ctools hook.
+ *
+ * Note that your custom module may already include this hook if you use CTools export-ables, in which case
+ * you should just add the relevant conditional inside the existing implementation.
+ */
+function hook_ctools_plugin_api($module, $api) {
+  // Conversion behaviors.
+  if ($module == 'node_convert' && $api == NODE_CONVERT_BEHAVIOR_PLUGIN) {
+    return array(
+      'version' => 1,
+      'path' => drupal_get_path('module', 'custom') . '/includes/',
+      'file' => "$module.$api.inc",
+    );
+  }
+
+  return NULL;
+}
+
 
 /**
  * This is an example implementation for the hook. Preforms actions when converting a node based on it's type.
@@ -14,7 +36,7 @@
  *   - node  The node object
  *   - Any other information passed by $op = 'options' or $op = 'options validate'
  * @param $op
- *   A string containg the operation which should be executed. These are the possible values
+ *   A string containing the operation which should be executed. These are the possible values
  *   - insert  Operations which should be run when the node is transferred to the new node type.
  *   Usually for transferring and adding new node information into the database.
  *   - delete  Operations which should be run after the node is transferred to the new node type.

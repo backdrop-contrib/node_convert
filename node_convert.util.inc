@@ -64,9 +64,8 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   }
 
   // We make sure that all custom node modules do their changes at the appropriate steps
-  node_convert_load_includes();
-  module_invoke_all('node_convert_change', $data, 'insert');
-  module_invoke_all('node_convert_change', $data, 'delete');
+  node_convert_invoke_all('node_convert_change', $data, 'insert');
+  node_convert_invoke_all('node_convert_change', $data, 'delete');
 
   // TODO Check what to do about token cache clearing.
   /* if (module_exists('token')) {

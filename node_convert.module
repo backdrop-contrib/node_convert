@@ -17,6 +17,8 @@ define('NODE_CONVERT_TEMPLATE_TABLE', 'node_convert_templates');
 define('NODE_CONVERT_WATCHDOG', 'node_convert');
 define('NODE_CONVERT_ADMIN_INC', 'node_convert.admin.inc');
 define('NODE_CONVERT_FORMS_INC', 'node_convert.forms.inc');
+define('NODE_CONVERT_BEHAVIOR_PLUGIN', 'node_convert_behavior');
+define('NODE_CONVERT_CHANGE_HOOK', 'node_convert_change');
 
 /**
  * Implements hook_help().
@@ -36,19 +38,6 @@ function node_convert_help($path, $arg) {
       $output .= t('<ol><li>Set appropriate permissions.</li><li>Go to <a href="@node_convert_templates">Node Convert templates</a>.</li><li>Create a new template following the the provided steps (also check Create Action).</li><li>Create a new <a href="@view">view</a> with the options you require.</li><li>Select Views Bulk Operations as the style.</li><li>Configure all options as necessary</li><li>Select as an operation one of the convert templates.<br />Note: Most probably there will be duplicates of the same template, this is because VBO uses both Actions API and hook_node_operations to show possible operations</li><li>Save the view. View it.</li><li>Select the necessary nodes and click the Convert x button.</li></ol>', array('@node_convert_template' => url('admin/structure/node_convert_template'), '@view' => url('admin/structure/views')));
       $output .= '<p>' . t('Useful API calls:<br />node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_fields, $no_fields_flag, $hook_options = NULL);<br />node_convert_field_convert($nid, $source_field, $dest_field);<br />hook_node_convert_change($data, $op);') . '</p>';
       return $output;
-  }
-}
-
-/**
- * Loads includes that execute various behavior on node conversion.
- */
-function node_convert_load_includes() {
-  // TODO Fix loading of includes that implement hook_node_convert_change.
-  foreach (array('xmlsitemap') as $module) {
-    if (module_exists($module)) {
-      $include_folder = 'modules';
-      module_load_include('node_convert.inc', 'node_convert',  $include_folder . '/' . $module);
-    }
   }
 }
 
@@ -470,13 +459,90 @@ function _node_convert_recreate_identifiers() {
   }
 }
 
+function node_convert_api_minimum_version() {
+  return '1';
+}
+
+function node_convert_api_version() {
+  return '1';
+}
+
+/**
+ * Loads include files, that execute various behaviors on node conversion.
+ *
+ * These can also be defined by other modules.
+ */
+function node_convert_load_includes() {
+  ctools_include('plugins');
+  return ctools_plugin_api_include('node_convert', NODE_CONVERT_BEHAVIOR_PLUGIN, node_convert_api_minimum_version(), node_convert_api_version());
+}
+
 /**
  * Implementation of hook_ctools_plugin_api().
  *
- * Tell CTools that we support the default_node_convert_templates API.
+ * Tell CTools that we support default conversion templates, and also custom behaviors.
  */
-function node_convert_ctools_plugin_api($owner, $api) {
-  if ($owner == 'node_convert' && $api == 'default_node_convert_templates') {
-    return array('version' => 1);
+function node_convert_ctools_plugin_api($module, $api) {
+  // Default conversion templates.
+  if ($module == 'node_convert' && $api == 'node_convert') {
+    return array('version' => node_convert_api_version());
   }
+
+  // Conversion behaviors.
+  if ($module == 'node_convert' && $api == NODE_CONVERT_BEHAVIOR_PLUGIN) {
+    return array(
+      'version' => node_convert_api_version(),
+      'path' => drupal_get_path('module', 'node_convert') . '/modules/',
+      'file' => "$module.$api.inc",
+    );
+  }
+
+  return NULL;
+}
+
+/**
+ * Declare API compatibility on behalf of certain modules.
+ *
+ * @return array
+ */
+function node_convert_provided_module_behaviors() {
+  $provided_module_behaviors = array('xmlsitemap');
+  return $provided_module_behaviors;
+}
+
+/**
+ * Instead of using module_invoke_all, we have to use the ctools pattern, because the module hooks are loaded dynamically by CTools.
+ *
+ * Additionally we add in a few other modules, for which we provide API integration.
+ *
+ * @param $hook
+ * @param $data
+ * @param $op
+ * @return array
+ */
+function node_convert_invoke_all($hook, $data, $op) {
+  $return = array();
+
+  $provided_modules = node_convert_provided_module_behaviors();
+  $provided_modules = array_combine($provided_modules, $provided_modules);
+  $other_modules = node_convert_load_includes();
+  $all_modules = array_merge($provided_modules, $other_modules);
+
+  foreach ($all_modules as $module => $info) {
+    $function = $module . '_' . $hook;
+    // Just because they implement the API and include a file does not guarantee they implemented
+    // a hook function!
+    if (!function_exists($function)) {
+      continue;
+    }
+
+    $result = $function($data, $op);
+    if (isset($result) && is_array($result)) {
+      $return = array_merge_recursive($return, $result);
+    }
+    elseif (isset($result)) {
+      $return[] = $result;
+    }
+  }
+  return $return;
 }

@@ -207,9 +207,8 @@ function node_convert_add_template($form, $form_state) {
       '#value' => $no_fields,
     );
 
-    node_convert_load_includes();
     // All node specific form options needed for types like book, forum, etc. are done here
-    $hook_options = module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['dest_type']), 'options');
+    $hook_options = node_convert_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['dest_type']), 'options');
     if (!empty($hook_options)) {
       $form['hook_options'] = $hook_options;
       array_unshift($form['hook_options'], array('#value' => '<strong>' . t("Also the following parameters are available:") . '</strong>'));
@@ -243,8 +242,7 @@ function node_convert_add_template_validate($form, &$form_state) {
   }
   // All node specific form validations needed for types like book, forum, etc. are done here
   elseif ($form_state['values']['step'] == 'choose_destination_fields') {
-    node_convert_load_includes();
-    module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['dest_type'], 'form_state' => $form_state), 'options validate');
+    node_convert_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['dest_type'], 'form_state' => $form_state), 'options validate');
   }
 }
 

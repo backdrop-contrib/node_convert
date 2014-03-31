@@ -118,8 +118,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
       '#value' => $no_fields,
     );
 
-    node_convert_load_includes();
-    $hook_options = module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type']), 'options');
+    $hook_options = node_convert_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type']), 'options');
     if (!empty($hook_options)) {
       $form['hook_options'] = $hook_options;
       array_unshift($form['hook_options'], array('#value' => '<br /><strong>' . t("Also the following parameters are available:") . '</strong>'));
@@ -146,8 +145,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
 
 function node_convert_conversion_form_validate($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_fields') {
-    node_convert_load_includes();
-    module_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type'], 'form_state' => $form_state), 'options validate');
+    node_convert_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type'], 'form_state' => $form_state), 'options validate');
   }
 }
 

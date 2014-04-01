@@ -10,11 +10,11 @@
  *
  * @param $nid
  *   The nid of the node to be converted.
- * @param $dest_node_type
+ * @param $destination_node_type
  *   A string containing the destination node type of the node.
  * @param $source_fields
  *   An array containing the source field names.
- * @param $dest_fields
+ * @param $destination_fields
  *   An array containing the destination field names.
  * @param $no_fields_flag
  *   A boolean containing if there are source fields that have to be converted.
@@ -22,32 +22,32 @@
  *   An array containing values used by the hook_node_convert_change functions.
  * @return bool Returns the $nid.
  */
-function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_fields, $no_fields_flag, $hook_options = NULL) {
+function node_convert_node_convert($nid, $destination_node_type, $source_fields, $destination_fields, $no_fields_flag, $hook_options = NULL) {
   $node = node_load($nid);
   if ($node == FALSE) {
     return FALSE;
   }
 
   // Change the node type in the DB
-  db_update('node')->fields(array('type' => $dest_node_type))->condition('nid', $nid)->execute();
+  db_update('node')->fields(array('type' => $destination_node_type))->condition('nid', $nid)->execute();
 
   // If there are fields that can be converted
   if ($no_fields_flag == FALSE) {
 
     // Conversion process for each field
-    $resave_body_field = FALSE;
+    $re_save_body_field = FALSE;
 
     // Use node revisions to extract all field revision in node_convert_field_convert
     $node_revisions = node_revision_list($node);
 
     foreach ($source_fields as $key => $field) {
-      $replaced_body = node_convert_field_convert($node, $field, $dest_fields[$key], $dest_node_type, $node_revisions);
+      $replaced_body = node_convert_field_convert($node, $field, $destination_fields[$key], $destination_node_type, $node_revisions);
       if ($replaced_body == REPLACE_BODY) {
-        $resave_body_field = TRUE;
+        $re_save_body_field = TRUE;
       }
     }
     // If something was appended to the body, or replaced the body, we update body field.
-    if ($resave_body_field == TRUE) {
+    if ($re_save_body_field == TRUE) {
       $field_body = field_info_fields();
       $field_body = $field_body['body'];
       $field_ids = array($field_body['id'] => $field_body['id']);
@@ -57,7 +57,7 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   // We collate data to send to the hook implementations
   $data = array(
     'node' => $node,
-    'dest_node_type' => $dest_node_type,
+    'dest_node_type' => $destination_node_type,
   );
   if (!empty($hook_options)) {
     $data['hook_options'] = $hook_options;
@@ -73,7 +73,7 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
   }*/
   cache_clear_all('field:node:' . $node->nid, 'cache_field');
   $converted_node = node_load($nid, NULL, TRUE);
-  $converted_node->type = $dest_node_type;
+  $converted_node->type = $destination_node_type;
   try {
     node_save($converted_node);
 
@@ -97,28 +97,28 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
  *   The node object to be converted.
  * @param $source_field
  *   A string containing the name of the source field which contains to be transferred information.
- * @param $dest_field
+ * @param $destination_field
  *   A string containing the name of the destination field where the information should be stored.
- * @param string $dest_node_type
+ * @param string $destination_node_type
  *   A string containing the destination node type of the node.
  * @param array $node_revisions
  * @return string Returns REPLACE_BODY if something replaced the body field, or was appended to it.
  */
-function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_node_type = '', $node_revisions = array()) {
+function node_convert_field_convert(&$node, $source_field, $destination_field, $destination_node_type = '', $node_revisions = array()) {
   $field_info_source = field_info_fields(); // Get source field information
   $field_info_source = $field_info_source[$source_field];
   $db_info_source = $field_info_source['storage']; // Get DB specific source field information
 
-  if ($dest_field == 'discard') {
+  if ($destination_field == 'discard') {
     // Delete node info in the separate field table
     node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node);
     return;
   }
 
-  if (!in_array($dest_field, array('discard', APPEND_TO_BODY, REPLACE_BODY))) {
-    $field_info_dest = field_info_fields($dest_field); // Get destination field information
-    $field_info_dest = $field_info_dest[$dest_field]; // Get destination field information
-    $db_info_dest = $field_info_dest['storage']; // Get DB specific destination field information
+  if (!in_array($destination_field, array('discard', APPEND_TO_BODY, REPLACE_BODY))) {
+    $field_info_destination = field_info_fields($destination_field); // Get destination field information
+    $field_info_destination = $field_info_destination[$destination_field]; // Get destination field information
+    $db_info_destination = $field_info_destination['storage']; // Get DB specific destination field information
   }
 
   $source_values = array();
@@ -129,7 +129,7 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
     // Get all field revisions for current node
     $field_revision_values = array();
     $field_revision_source_table = current(array_keys($db_info_source['details']['sql']['FIELD_LOAD_REVISION']));
-    $field_revision_destination_table = current(array_keys($db_info_dest['details']['sql']['FIELD_LOAD_REVISION']));
+    $field_revision_destination_table = current(array_keys($db_info_destination['details']['sql']['FIELD_LOAD_REVISION']));
 
     $source_columns = array('entity_type', 'entity_id', 'revision_id', 'bundle', 'delta', 'language');
     foreach ($field_info_source['columns'] as $column => $attributes) {
@@ -145,7 +145,7 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
 
     // Change the bundle to the destination type of the node
     foreach ($revision_query as $row) {
-      $row['bundle'] = $dest_node_type;
+      $row['bundle'] = $destination_node_type;
       $field_revision_values[] = $row;
     }
 
@@ -155,8 +155,8 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
     // Reinsert the field revisions in the destination field revision table
     $query = db_insert($field_revision_destination_table);
     $columns = array('entity_type', 'entity_id', 'revision_id', 'bundle', 'delta', 'language');
-    foreach ($field_info_dest['columns'] as $column => $attributes) {
-      $columns[] = _field_sql_storage_columnname($dest_field, $column);
+    foreach ($field_info_destination['columns'] as $column => $attributes) {
+      $columns[] = _field_sql_storage_columnname($destination_field, $column);
     }
     $query->fields($columns);
     foreach ($field_revision_values as $row) {
@@ -171,7 +171,7 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
   }
 
   // The source field value should be appended to the body or replaced.
-  if ($dest_field == APPEND_TO_BODY || $dest_field == REPLACE_BODY) {
+  if ($destination_field == APPEND_TO_BODY || $destination_field == REPLACE_BODY) {
     static $node_body = '';
     //static $node_teaser = '';
     if (empty($node_body)) {
@@ -181,18 +181,18 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
     }
     if (is_array($source_values)) {
       foreach ($source_values as $field_value) {
-        if ($dest_field == APPEND_TO_BODY) {
+        if ($destination_field == APPEND_TO_BODY) {
           $node_body = $node_body . "\n" . $field_value['value'];
           //$node_teaser = $node_teaser . "\n" . $field_value['value'];
         }
-        elseif ($dest_field == REPLACE_BODY) {
+        elseif ($destination_field == REPLACE_BODY) {
           $node_body = $field_value['value'];
           //$node_teaser = $field_value['value'];
         }
       }
-      $langcode = field_language('node', $node, $source_field);
-      $node->body[$langcode][0]['value'] = $node_body;
-      //$node->body[$langcode][0]['summary'] = $node_teaser;
+      $lang_code = field_language('node', $node, $source_field);
+      $node->body[$lang_code][0]['value'] = $node_body;
+      //$node->body[$lang_code][0]['summary'] = $node_teaser;
     }
 
     return REPLACE_BODY;
@@ -201,27 +201,27 @@ function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_no
   // We put each field value back into the DB
   // To do it we first get the id of the field, then we find its language code from the source value
   // We add $source_values into the node object, and invoke field_storage write
-  $field_ids = array($field_info_dest['id'] => $field_info_dest['id']);
-  $langcode = field_language('node', $node, $source_field);
+  $field_ids = array($field_info_destination['id'] => $field_info_destination['id']);
+  $lang_code = field_language('node', $node, $source_field);
 
   // Make sure that we actually have values in the source field
   if ($source_values !== FALSE) {
-    $node->{$dest_field}[$langcode] = $source_values;
+    $node->{$destination_field}[$lang_code] = $source_values;
   }
   else {
-    $node->{$dest_field} = array();
+    $node->{$destination_field} = array();
   }
 
   // Give possibility to fields to pre-process their data
   // (e.g. Link module transforms attribute array into a serialized array before insertion)
   field_attach_presave('node', $node);
   // For some reason link_field_presave doesn't exist anymore, so we have to call it the processing function used inside manually.
-  if ($field_info_dest['type'] == 'link_field') {
-    $instances = field_info_instances('node', $dest_node_type);
-    link_field_update('node', $node, $field_info_dest, $instances[$dest_field], $langcode, $node->{$dest_field}[$langcode]);
+  if ($field_info_destination['type'] == 'link_field') {
+    $instances = field_info_instances('node', $destination_node_type);
+    link_field_update('node', $node, $field_info_destination, $instances[$destination_field], $lang_code, $node->{$destination_field}[$lang_code]);
   }
   try {
-    module_invoke($db_info_dest['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_INSERT, $field_ids);
+    module_invoke($db_info_destination['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_INSERT, $field_ids);
   } catch (Exception $e) {
     drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())));
   }
@@ -270,13 +270,12 @@ function node_convert_messages($result, $params = array()) {
  *   A $node object
  * @param $field
  *   The field who's value to get.
- * @return
- *   A string containing the value of the $field from the $node object.
+ * @return string A string containing the value of the $field from the $node object.
  */
 function node_convert_get_field_value($node, $field) {
   $value = '';
 
-  /* @var $field_values Array*/
+  /* @var $field_values Array */
   $field_values = field_get_items('node', $node, $field['field_name']);
   if ($field['type'] == 'text') {
     $value = node_convert_format_field_value($field_values, 'Text', 'Texts', array('safe_value'));

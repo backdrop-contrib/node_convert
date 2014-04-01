@@ -278,77 +278,91 @@ function node_convert_messages($result, $params = array()) {
 function node_convert_format_field_value($node, $field, $no_labels = FALSE) {
   /* @var $field_values Array */
   $field_values = field_get_items('node', $node, $field['field_name']);
+  $options = array();
+
   if ($field['type'] == 'text') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Text', 'plural_label' => 'Texts', 'columns' => array('safe_value')));
+    $options = array('singular_label' => 'Text', 'plural_label' => 'Texts', 'columns' => array('safe_value'));
   }
   elseif ($field['type'] == 'text_with_summary') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Text w/Summary', 'plural_label' => 'Texts w/Summary', 'columns' => array('safe_value')));
+    $options = array('singular_label' => 'Text w/Summary', 'plural_label' => 'Texts w/Summary', 'columns' => array('safe_value'));
   }
   elseif ($field['type'] == 'image') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'Title' => 'title', 'URI' => 'uri')));
+    $options = array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'Title' => 'title', 'URI' => 'uri'));
   }
   elseif ($field['type'] == 'link_field') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Link', 'plural_label' => 'Links', 'columns' => array('url', 'title')));
+    $options = array('singular_label' => 'Link', 'plural_label' => 'Links', 'columns' => array('url', 'title'));
   }
   elseif ($field['type'] == "email") {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Email', 'plural_label' => 'Emails', 'columns' => array('email')));
+    $options = array('singular_label' => 'Email', 'plural_label' => 'Emails', 'columns' => array('email'));
   }
   elseif ($field['type'] == 'file') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'URI' => 'uri')));
+    $options = array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'URI' => 'uri'));
   }
   elseif ($field['type'] == 'taxonomy_term_reference') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Term ID', 'plural_label' => 'Term IDs', 'columns' => array('tid')));
+    $options = array('singular_label' => 'Term ID', 'plural_label' => 'Term IDs', 'columns' => array('tid'));
   }
   elseif ($field['type'] == 'node_reference') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Node ID', 'plural_label' => 'Node IDs', 'columns' => array('nid')));
+    $options = array('singular_label' => 'Node ID', 'plural_label' => 'Node IDs', 'columns' => array('nid'));
   }
   elseif ($field['type'] == 'user_reference') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'User ID', 'plural_label' => 'User IDs', 'columns' => array('uid')));
+    $options = array('singular_label' => 'User ID', 'plural_label' => 'User IDs', 'columns' => array('uid'));
   }
   elseif ($field['type'] == 'entityreference') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Entity ID', 'plural_label' => 'Entity IDs', 'columns' => array('target_id'),
-      'prefix_label' => 'Entity Type: ' . $field['settings']['target_type']));
+    $options = array('singular_label' => 'Entity ID', 'plural_label' => 'Entity IDs', 'columns' => array('target_id'),
+      'prefix_label' => 'Entity Type: ' . $field['settings']['target_type']);
   }
   elseif ($field['type'] == 'date') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Date', 'plural_label' => 'Dates', 'columns' => array('value', 'timezone')));
+    $options = array('singular_label' => 'Date', 'plural_label' => 'Dates', 'columns' => array('value', 'timezone'));
   }
   elseif ($field['type'] == 'datestamp') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Date-stamp', 'plural_label' => 'Date-stamps', 'columns' => array('value', 'timezone')));
+    $options = array('singular_label' => 'Date-stamp', 'plural_label' => 'Date-stamps', 'columns' => array('value', 'timezone'));
   }
   elseif ($field['type'] == 'datetime') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Date-time', 'plural_label' => 'Date-time', 'columns' => array('value', 'timezone')));
+    $options = array('singular_label' => 'Date-time', 'plural_label' => 'Date-time', 'columns' => array('value', 'timezone'));
   }
   elseif ($field['type'] == 'number_decimal') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Decimal', 'plural_label' => 'Decimals', 'columns' => array('value')));
+    $options = array('singular_label' => 'Decimal', 'plural_label' => 'Decimals', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'number_float') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Float', 'plural_label' => 'Floats', 'columns' => array('value')));
+    $options = array('singular_label' => 'Float', 'plural_label' => 'Floats', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'number_integer') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'Integer', 'plural_label' => 'Integers', 'columns' => array('value')));
+    $options = array('singular_label' => 'Integer', 'plural_label' => 'Integers', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'list_boolean') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'List Boolean', 'plural_label' => 'List Booleans', 'columns' => array('value')));
+    $options = array('singular_label' => 'List Boolean', 'plural_label' => 'List Booleans', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'list_float') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'List Float', 'plural_label' => 'List Floats', 'columns' => array('value')));
+    $options = array('singular_label' => 'List Float', 'plural_label' => 'List Floats', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'list_integer') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'List Integer', 'plural_label' => 'List Integers', 'columns' => array('value')));
+    $options = array('singular_label' => 'List Integer', 'plural_label' => 'List Integers', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'list_text') {
-    $value = node_convert_format_field_value_helper($field_values, array('singular_label' => 'List Text', 'plural_label' => 'List Texts', 'columns' => array('value')));
+    $options = array('singular_label' => 'List Text', 'plural_label' => 'List Texts', 'columns' => array('value'));
+  }
+  elseif (isset($field_values[0]['value'])) {
+    $options['columns'] = array('value');
+    //$value = t("Unknown field format, can't display field value.");
   }
   else {
-    if (!isset($field_values[0]['value'])) {
+    $unknown_format = TRUE;
+  }
+
+  // It's a known format, show the value.
+  if (!isset($unknown_format)) {
+    $options += array('no_labels' => $no_labels);
+    $value = node_convert_format_field_value_helper($field_values, $options);
+  }
+  else {
+    // Format is not known, and we should show the error message.
+    if (!$no_labels) {
       $value = t("Unknown field format, can't display field value.");
     }
+    // Format unknown, don't show anything.
     else {
-      $value = $field_values[0]['value'];
+      $value = '';
     }
-  }
-  if (empty($value)) {
-    $value = 'NULL';
   }
   return $value;
 }
@@ -372,15 +386,21 @@ function node_convert_format_field_value_helper($field_values, $options = array(
   $singular_label = isset($options['singular_label']) ? $options['singular_label'] : '';
   $plural_label = isset($options['plural_label']) ? $options['plural_label'] : '';
   $columns = isset($options['columns']) ? $options['columns'] : array();
+  $no_labels = isset($options['no_labels']) ? $options['no_labels'] : array();
 
   if (empty($field_values)) {
+    if (!$no_labels) {
+      $output = 'NULL';
+    }
     return $output;
   }
 
-  if (!empty($prefix_label)) {
+  // Prefix a label.
+  if (!empty($prefix_label) && !$no_labels) {
     $output .= $prefix_label . ' ; ';
   }
 
+  // Add the label depending on number of field values.
   $count = count($field_values);
   $label = format_plural($count, $singular_label, $plural_label, array());
 
@@ -390,7 +410,7 @@ function node_convert_format_field_value_helper($field_values, $options = array(
 
     foreach ($columns as $column_key => $column) {
       $column_label = '';
-      if (!is_numeric($column_key) && !empty($item[$column])) {
+      if (!is_numeric($column_key) && !empty($item[$column]) && !$no_labels) {
         $column_label = $column_key . ': ';
       }
       $column_values[] = $column_label . $item[$column];
@@ -398,6 +418,11 @@ function node_convert_format_field_value_helper($field_values, $options = array(
     $items[] = implode(' ', $column_values);
 
   }
-  $output .= $label . ': ' . implode(', ', $items);
+
+  $final_label = '';
+  if (!$no_labels) {
+    $final_label = $label . ': ';
+  }
+  $output .= $final_label . implode(', ', $items);
   return $output;
 }

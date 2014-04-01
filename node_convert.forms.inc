@@ -102,7 +102,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
         );
 
         // Print the current value of the source field
-        $temp_value = node_convert_get_field_value($node, $fields_info[$source_field_name]);
+        $temp_value = node_convert_format_field_value($node, $fields_info[$source_field_name]);
         $form['container_' . $i]['current_field_value_' . $i] = array(
           '#type' => 'item',
           '#markup' => '<div>' . t("Current value is:") . " <b>" . $temp_value . '</b></div>',

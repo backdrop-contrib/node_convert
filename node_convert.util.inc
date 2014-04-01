@@ -175,21 +175,26 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   if ($destination_field == APPEND_TO_BODY || $destination_field == REPLACE_BODY) {
     static $node_body = '';
     //static $node_teaser = '';
+
+    // We try to get the node body from a static variable, which means we did some body manipulations, otherwise load it.
     if (empty($node_body)) {
       $node_body_field = field_get_items('node', $node, 'body');
       $node_body = $node_body_field[0]['value'];
       //$node_teaser = $node_body_field[0]['summary'];
     }
+
+    // Double check we have values in the field.
     if (is_array($source_values)) {
-      foreach ($source_values as $field_value) {
-        if ($destination_field == APPEND_TO_BODY) {
-          $node_body = $node_body . "\n" . $field_value['value'];
-          //$node_teaser = $node_teaser . "\n" . $field_value['value'];
-        }
-        elseif ($destination_field == REPLACE_BODY) {
-          $node_body = $field_value['value'];
-          //$node_teaser = $field_value['value'];
-        }
+      // Get the field value.
+      $field_value = node_convert_format_field_value($node, $field_info_source, TRUE);
+
+      if ($destination_field == APPEND_TO_BODY) {
+        $node_body = $node_body . "\n" . $field_value;
+        //$node_teaser = $node_teaser . "\n" . $field_value['value'];
+      }
+      elseif ($destination_field == REPLACE_BODY) {
+        $node_body = $field_value;
+        //$node_teaser = $field_value['value'];
       }
       $lang_code = field_language('node', $node, $source_field);
       $node->body[$lang_code][0]['value'] = $node_body;

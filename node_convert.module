@@ -560,7 +560,7 @@ function node_convert_ctools_plugin_api($module, $api) {
  * @return array
  */
 function node_convert_provided_module_behaviors() {
-  $provided_module_behaviors = array('xmlsitemap');
+  $provided_module_behaviors = array('xmlsitemap', 'comment');
   return $provided_module_behaviors;
 }
 
@@ -583,6 +583,10 @@ function node_convert_invoke_all($hook, $data, $op) {
   $all_modules = array_merge($provided_modules, $other_modules);
 
   foreach ($all_modules as $module => $info) {
+    if (!module_exists($module)) {
+      continue;
+    }
+
     $function = $module . '_' . $hook;
     // Just because they implement the API and include a file does not guarantee they implemented
     // a hook function!

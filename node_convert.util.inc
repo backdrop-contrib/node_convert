@@ -278,15 +278,21 @@ function node_convert_get_field_value($node, $field) {
 
   /* @var $field_values Array*/
   $field_values = field_get_items('node', $node, $field['field_name']);
-  if ($field['type'] == 'image') {
+  if ($field['type'] == 'text') {
+    $value = node_convert_format_field_value($field_values, 'Text', 'Texts', array('safe_value'));
+  }
+  elseif ($field['type'] == 'text_with_summary') {
+    $value = node_convert_format_field_value($field_values, 'Text w/Summary', 'Texts w/Summary', array('safe_value'));
+  }
+  elseif ($field['type'] == 'image') {
     $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'title', 'uri'));
   }
   elseif ($field['type'] == 'link_field') {
     $value = node_convert_format_field_value($field_values, 'Link', 'Links', array('url', 'title'));
   }
-  /* elseif ($field['type'] == "email") {
-    $value = $field_values[0]['email'];
-  }*/
+  elseif ($field['type'] == "email") {
+    $value = node_convert_format_field_value($field_values, 'Email', 'Emails', array('email'));
+  }
   elseif ($field['type'] == 'file') {
     $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'uri'));
   }
@@ -301,6 +307,36 @@ function node_convert_get_field_value($node, $field) {
   }
   elseif ($field['type'] == 'entityreference') {
     $value = node_convert_format_field_value($field_values, 'Entity ID', 'Entity IDs', array('target_id'), 'Entity Type: ' . $field['settings']['target_type']);
+  }
+  elseif ($field['type'] == 'date') {
+    $value = node_convert_format_field_value($field_values, 'Date', 'Dates', array('value', 'timezone'));
+  }
+  elseif ($field['type'] == 'datestamp') {
+    $value = node_convert_format_field_value($field_values, 'Date-stamp', 'Date-stamps', array('value', 'timezone'));
+  }
+  elseif ($field['type'] == 'datetime') {
+    $value = node_convert_format_field_value($field_values, 'Date-time', 'Date-time', array('value', 'timezone'));
+  }
+  elseif ($field['type'] == 'number_decimal') {
+    $value = node_convert_format_field_value($field_values, 'Decimal', 'Decimals', array('value'));
+  }
+  elseif ($field['type'] == 'number_float') {
+    $value = node_convert_format_field_value($field_values, 'Float', 'Floats', array('value'));
+  }
+  elseif ($field['type'] == 'number_integer') {
+    $value = node_convert_format_field_value($field_values, 'Integer', 'Integers', array('value'));
+  }
+  elseif ($field['type'] == 'list_boolean') {
+    $value = node_convert_format_field_value($field_values, 'List Boolean', 'List Booleans', array('value'));
+  }
+  elseif ($field['type'] == 'list_float') {
+    $value = node_convert_format_field_value($field_values, 'List Float', 'List Floats', array('value'));
+  }
+  elseif ($field['type'] == 'list_integer') {
+    $value = node_convert_format_field_value($field_values, 'List Integer', 'List Integers', array('value'));
+  }
+  elseif ($field['type'] == 'list_text') {
+    $value = node_convert_format_field_value($field_values, 'List Text', 'List Texts', array('value'));
   }
   else {
     if (!isset($field_values[0]['value'])) {
@@ -323,6 +359,11 @@ function node_convert_get_field_value($node, $field) {
  */
 function node_convert_format_field_value($field_values, $singular_label, $plural_label, $columns, $prefix_label = '') {
   $output = '';
+
+  if (empty($field_values)) {
+    return $output;
+  }
+
   if (!empty($prefix_label)) {
     $output .= $prefix_label . ' ; ';
   }

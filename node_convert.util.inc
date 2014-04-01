@@ -112,20 +112,21 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   if ($destination_field == 'discard') {
     // Delete node info in the separate field table
     node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node);
-    return;
+    return NULL;
   }
 
+  $field_info_destination = array();
+  $db_info_destination = array();
   if (!in_array($destination_field, array('discard', APPEND_TO_BODY, REPLACE_BODY))) {
     $field_info_destination = field_info_fields($destination_field); // Get destination field information
     $field_info_destination = $field_info_destination[$destination_field]; // Get destination field information
     $db_info_destination = $field_info_destination['storage']; // Get DB specific destination field information
   }
 
-  $source_values = array();
   // We save each field value from the DB for transfer. (this only applies to the current revision of the field)
   $source_values = field_get_items('node', $node, $source_field);
 
-  if (count($node_revisions) > 1) {
+  if (count($node_revisions) > 1 && !in_array($destination_field, array(APPEND_TO_BODY, REPLACE_BODY))) {
     // Get all field revisions for current node
     $field_revision_values = array();
     $field_revision_source_table = current(array_keys($db_info_source['details']['sql']['FIELD_LOAD_REVISION']));
@@ -225,6 +226,7 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   } catch (Exception $e) {
     drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())));
   }
+  return NULL;
 }
 
 function node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node) {
@@ -273,8 +275,6 @@ function node_convert_messages($result, $params = array()) {
  * @return string A string containing the value of the $field from the $node object.
  */
 function node_convert_get_field_value($node, $field) {
-  $value = '';
-
   /* @var $field_values Array */
   $field_values = field_get_items('node', $node, $field['field_name']);
   if ($field['type'] == 'text') {

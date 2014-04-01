@@ -99,10 +99,10 @@ function node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_
  *   A string containing the name of the source field which contains to be transferred information.
  * @param $dest_field
  *   A string containing the name of the destination field where the information should be stored.
- * @param $dest_node_type
+ * @param string $dest_node_type
  *   A string containing the destination node type of the node.
- * @return
- *   Returns REPLACE_BODY if something replaced the body field, or was appended to it.
+ * @param array $node_revisions
+ * @return string Returns REPLACE_BODY if something replaced the body field, or was appended to it.
  */
 function node_convert_field_convert(&$node, $source_field, $dest_field, $dest_node_type = '', $node_revisions = array()) {
   $field_info_source = field_info_fields(); // Get source field information

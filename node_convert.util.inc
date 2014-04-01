@@ -285,7 +285,7 @@ function node_convert_get_field_value($node, $field) {
     $value = node_convert_format_field_value($field_values, 'Text w/Summary', 'Texts w/Summary', array('safe_value'));
   }
   elseif ($field['type'] == 'image') {
-    $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'title', 'uri'));
+    $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'Title' => 'title', 'URI' => 'uri'));
   }
   elseif ($field['type'] == 'link_field') {
     $value = node_convert_format_field_value($field_values, 'Link', 'Links', array('url', 'title'));
@@ -294,7 +294,7 @@ function node_convert_get_field_value($node, $field) {
     $value = node_convert_format_field_value($field_values, 'Email', 'Emails', array('email'));
   }
   elseif ($field['type'] == 'file') {
-    $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'uri'));
+    $value = node_convert_format_field_value($field_values, 'File ID', 'File IDs', array('fid', 'URI' => 'uri'));
   }
   elseif ($field['type'] == 'taxonomy_term_reference') {
     $value = node_convert_format_field_value($field_values, 'Term ID', 'Term IDs', array('tid'));
@@ -353,8 +353,14 @@ function node_convert_get_field_value($node, $field) {
 }
 
 /**
- * @param $field
+ * Format a field's values.
+ *
  * @param $field_values
+ * @param $singular_label
+ * @param $plural_label
+ * @param $columns
+ * @param string $prefix_label
+ * @internal param $field
  * @return string
  */
 function node_convert_format_field_value($field_values, $singular_label, $plural_label, $columns, $prefix_label = '') {
@@ -375,8 +381,12 @@ function node_convert_format_field_value($field_values, $singular_label, $plural
   foreach ($field_values as $item) {
     $column_values = array();
 
-    foreach ($columns as $column) {
-      $column_values[] = $item[$column];
+    foreach ($columns as $column_key => $column) {
+      $column_label = '';
+      if (!is_numeric($column_key) && !empty($item[$column])) {
+        $column_label = $column_key . ': ';
+      }
+      $column_values[] = $column_label . $item[$column];
     }
     $items[] = implode(' ', $column_values);
 

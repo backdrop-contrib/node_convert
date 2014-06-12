@@ -140,3 +140,16 @@ function hook_node_convert_change($data, $op) {
     }
   }
 }
+
+/**
+ * Allow modifying a node during conversion but before the final save.
+ *
+ * @param stdClass $node
+ *   The node object.
+ * @param array $hook_options
+ *   Additional options passed to node_convert_node_convert().
+ */
+function hook_node_convert_presave($node, $hook_options = array()) {
+  // Set the author to user 1.
+  $node->uid = 1;
+}

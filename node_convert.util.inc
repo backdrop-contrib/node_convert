@@ -75,6 +75,7 @@ function node_convert_node_convert($nid, $destination_node_type, $source_fields,
   $converted_node = node_load($nid, NULL, TRUE);
   $converted_node->type = $destination_node_type;
   try {
+    module_invoke_all('node_convert_presave', $converted_node, $hook_options);
     node_save($converted_node);
 
     if (module_exists('rules')) {

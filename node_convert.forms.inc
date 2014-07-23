@@ -161,9 +161,11 @@ function node_convert_conversion_form_submit($form, &$form_state) {
     $node = $form_state['values']['node'];
     $nid = $node->nid;
     $no_fields = $form_state['values']['no_fields'];
-    $number_of_fields = $form_state['values']['number_of_fields'];
+    $number_of_fields = isset($form_state['values']['number_of_fields']) ? $form_state['values']['number_of_fields'] : 0;
 
-    // If there are fields that can to be converted
+    // If there are fields that can to be converted.
+    $source_fields = array();
+    $dest_fields = array();
     if ($no_fields == FALSE) {
       for ($i = 1; $i <= $number_of_fields; $i++) {
         $source_fields[] = $form_state['values']['source_field_' . $i]; //  Source fields

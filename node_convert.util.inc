@@ -297,10 +297,10 @@ function node_convert_format_field_value($node, $field, $no_labels = FALSE) {
   $options = array();
 
   if ($field['type'] == 'text') {
-    $options = array('singular_label' => 'Text', 'plural_label' => 'Texts', 'columns' => array('safe_value'));
+    $options = array('singular_label' => 'Text', 'plural_label' => 'Texts', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'text_with_summary') {
-    $options = array('singular_label' => 'Text w/Summary', 'plural_label' => 'Texts w/Summary', 'columns' => array('safe_value'));
+    $options = array('singular_label' => 'Text w/Summary', 'plural_label' => 'Texts w/Summary', 'columns' => array('value'));
   }
   elseif ($field['type'] == 'image') {
     $options = array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'Title' => 'title', 'URI' => 'uri'));
@@ -429,7 +429,8 @@ function node_convert_format_field_value_helper($field_values, $options = array(
       if (!is_numeric($column_key) && !empty($item[$column]) && !$no_labels) {
         $column_label = $column_key . ': ';
       }
-      $column_values[] = $column_label . $item[$column];
+      $column_value = isset($item[$column]) ? $item[$column] : '';
+      $column_values[] = $column_label . filter_xss_admin($column_value);
     }
     $items[] = implode(' ', $column_values);
 

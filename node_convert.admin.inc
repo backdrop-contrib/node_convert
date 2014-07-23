@@ -214,7 +214,10 @@ function node_convert_add_template($form, &$form_state, $template = NULL) {
         $form['dest_field_' . $i] = array(
           '#type' => 'select',
           '#options' => $options,
-          '#title' => $source_field['field_name'] . " " . t("should be inserted into"),
+          '#title' => (isset($source_field['label'])
+                  ? $source_field['label'] . ' (' . $source_field['field_name'] . ')'
+                  : $source_field['field_name'])
+                  . ' ' . t("should be inserted into"),
         );
 
         if ($is_editing_mode) {

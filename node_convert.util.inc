@@ -71,7 +71,14 @@ function node_convert_node_convert($nid, $destination_node_type, $source_fields,
   /* if (module_exists('token')) {
     token_get_values('global', NULL, TRUE);
   }*/
+
+  // Clear the node cache, so we have the latest information when saving the
+  // node.
+  $controller = entity_get_controller('node');
+  /* @var $controller DrupalEntityControllerInterface */
+  $controller->resetCache(array($node->nid));
   cache_clear_all('field:node:' . $node->nid, 'cache_field');
+
   $converted_node = node_load($nid, NULL, TRUE);
   $converted_node->type = $destination_node_type;
   try {

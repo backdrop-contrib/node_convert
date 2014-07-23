@@ -58,6 +58,9 @@ function node_convert_node_convert($nid, $destination_node_type, $source_fields,
   $data = array(
     'node' => $node,
     'dest_node_type' => $destination_node_type,
+    'source_fields' => $source_fields,
+    'destination_fields' => $destination_fields,
+    'no_fields_flag' => $no_fields_flag,
   );
   if (!empty($hook_options)) {
     $data['hook_options'] = $hook_options;

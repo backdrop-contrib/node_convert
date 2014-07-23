@@ -560,7 +560,12 @@ function node_convert_ctools_plugin_api($module, $api) {
  * @return array
  */
 function node_convert_provided_module_behaviors() {
-  $provided_module_behaviors = array('xmlsitemap', 'comment');
+  $provided_module_behaviors = array('xmlsitemap', 'comment', 'file');
+
+  // Allow modules to disable behavior plugins implemented on behalf of
+  // node convert.
+  drupal_alter(NODE_CONVERT_BEHAVIOR_PLUGIN, $provided_module_behaviors);
+
   return $provided_module_behaviors;
 }
 

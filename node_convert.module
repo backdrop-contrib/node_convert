@@ -216,6 +216,7 @@ function theme_node_convert_conversion_form($variables) {
 
 
 function theme_node_convert_add_template($variables) {
+  $output = '';
   $form = $variables['form'];
   if ($form['step']['#value'] == "choose_destination_type") {
     $output  = '<div>' . t("Choose the source type of the nodes that should be shown, and the destination type to which they will be converted.") . '</div>';
@@ -245,7 +246,7 @@ function node_convert_convert_action(&$node, &$context = array()) {
   $access = node_convert_check_template_permission_user(array('template' => $template));
   if ($access == FALSE) {
     drupal_set_message(t("You don't have permission to use this conversion template"), 'warning', FALSE);
-    return;
+    return FALSE;
   }
 
   if ($node->type != $template['source_type']) {
@@ -258,6 +259,7 @@ function node_convert_convert_action(&$node, &$context = array()) {
     // This is node_load is necessary. It loads the new data from the DB, which gets passed down the action chain by reference, where it is saved.
     $node = node_load($node->nid, NULL, TRUE);
   }
+  return TRUE;
 }
 
 function node_convert_convert_action_form($context) {
@@ -484,6 +486,8 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
       node_convert_messages($result, array('nid' => $nid));
     }
   }
+
+  return TRUE;
 }
 
 function node_convert_machine_name_check($machine_name) {
@@ -504,7 +508,7 @@ function _node_convert_recreate_identifiers() {
     ->fields('n')
     ->execute();
   $rows = array();
-  foreach($result as $row) {
+  foreach ($result as $row) {
     $row->machine_name = $row->source_type . '_to_' . $row->destination_type . '_' . $row->nctid;
     $rows[] = $row;
   }

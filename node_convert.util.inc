@@ -230,7 +230,7 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   }
 
   // Give possibility to fields to pre-process their data
-  // (e.g. Link module transforms attribute array into a serialized array before insertion)
+  // (e.g., Link module transforms attribute array into a serialized array before insertion)
   field_attach_presave('node', $node);
   // For some reason link_field_presave doesn't exist anymore, so we have to call it the processing function used inside manually.
   if ($field_info_destination['type'] == 'link_field') {
@@ -245,6 +245,9 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   return NULL;
 }
 
+/**
+ * Invokes the storage delete field hooks for a given field.
+ */
 function node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node) {
   $field_id = $field_info_source['id'];
   module_invoke($db_info_source['module'], 'field_storage_delete', 'node', $node, array($field_id => $field_id));
@@ -270,11 +273,13 @@ function node_convert_messages($result, $params = array()) {
     $message = "Conversion failed for node nid @nid.";
 
     watchdog(NODE_CONVERT_WATCHDOG, $message, $message_arguments, WATCHDOG_ERROR);
+    // @ignore security_3
     drupal_set_message(t($message, $message_arguments), 'error');
   }
   elseif ($params['display_success'] == TRUE) {
     $message = 'Node @nid has been converted successfully.';
 
+    // @ignore security_3
     drupal_set_message(t($message, $message_arguments));
     watchdog(NODE_CONVERT_WATCHDOG, $message, $message_arguments, WATCHDOG_INFO);
   }

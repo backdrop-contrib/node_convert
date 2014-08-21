@@ -69,6 +69,7 @@ function node_convert_permission() {
  * Implements hook_menu().
  */
 function node_convert_menu() {
+  // @ignore druplart_array_init
   $items = array();
 
   $items['node/%node/convert'] = array(
@@ -200,6 +201,9 @@ function node_convert_theme() {
 
 /* ----------- The form theme functions ------------ */
 
+/**
+ * Themes the node conversion form.
+ */
 function theme_node_convert_conversion_form($variables) {
   $form = $variables['form'];
   $output = '';
@@ -215,6 +219,9 @@ function theme_node_convert_conversion_form($variables) {
 }
 
 
+/**
+ * Themes the node conversion add template form.
+ */
 function theme_node_convert_add_template($variables) {
   $output = '';
   $form = $variables['form'];
@@ -262,6 +269,9 @@ function node_convert_convert_action(&$node, &$context = array()) {
   return TRUE;
 }
 
+/**
+ * Node convert action form.
+ */
 function node_convert_convert_action_form($context) {
   $result = db_query("SELECT * FROM {node_convert_templates}");
   $templates = array(0 => 'none');
@@ -285,6 +295,9 @@ function node_convert_convert_action_form($context) {
   return $form;
 }
 
+/**
+ * Submit callback for the node convert action form.
+ */
 function node_convert_convert_action_submit($form, &$form_state) {
   return array('template' => $form_state['values']['template']);
 }
@@ -358,7 +371,7 @@ function node_convert_load_template($template_id) {
   return FALSE;
 }
 
-/*
+/**
  * Loads all templates.
  */
 function node_convert_load_all_templates() {
@@ -397,6 +410,9 @@ function node_convert_delete_template($template, $ctools_crud = TRUE) {
   ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
 }
 
+/**
+ * Saves a conversion template.
+ */
 function node_convert_save_template($template_name, $machine_name, $source_type, $destination_type, $data, $is_editing_mode = FALSE) {
   $result = NULL;
   if (!$is_editing_mode) {
@@ -490,6 +506,9 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
   return TRUE;
 }
 
+/**
+ * Callback to check if an existing machine name for a template exists.
+ */
 function node_convert_machine_name_check($machine_name) {
   $query = db_select(NODE_CONVERT_TEMPLATE_TABLE, 'n');
   $query->addField('n', 'nctid');
@@ -517,10 +536,16 @@ function _node_convert_recreate_identifiers() {
   }
 }
 
+/**
+ * Minimum version for API.
+ */
 function node_convert_api_minimum_version() {
   return '1';
 }
 
+/**
+ * Current version for API.
+ */
 function node_convert_api_version() {
   return '1';
 }
@@ -536,7 +561,7 @@ function node_convert_load_includes() {
 }
 
 /**
- * Implementation of hook_ctools_plugin_api().
+ * Implements hook_ctools_plugin_api().
  *
  * Tell CTools that we support default conversion templates, and also custom behaviors.
  */

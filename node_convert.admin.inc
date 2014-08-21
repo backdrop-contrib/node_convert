@@ -7,8 +7,10 @@
 
 /* ------------- Template adding, viewing, deleting. ----------------- */
 
+/**
+ * List of templates page callback.
+ */
 function node_convert_templates() {
-  $output = '';
   $rows = array();
   $headers = array(t("Name"), t('Machine name'), t("Source type"), t("Dest type"), t("Operations"));
   $templates = node_convert_load_all_templates();
@@ -27,6 +29,9 @@ function node_convert_templates() {
   return $output;
 }
 
+/**
+ * Template info page callback.
+ */
 function node_convert_template_info($machine_name) {
   $output = '';
   $rows = array();
@@ -53,6 +58,9 @@ function node_convert_template_info($machine_name) {
   return $output;
 }
 
+/**
+ * Delete template confirmation form.
+ */
 function node_convert_template_delete_confirm($form, &$form_state, $template_id) {
   $form['template_id'] = array(
     '#type' => 'value',
@@ -75,6 +83,9 @@ function node_convert_template_delete_confirm($form, &$form_state, $template_id)
   );
 }
 
+/**
+ * Submit callback for delete template confirmation form.
+ */
 function node_convert_template_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     ctools_include('export');
@@ -102,7 +113,9 @@ function node_convert_template_delete_confirm_submit($form, &$form_state) {
   $form_state['redirect'] = 'admin/structure/node_convert_templates';
 }
 
-
+/**
+ * Add template page callback.
+ */
 function node_convert_add_template($form, &$form_state, $template = NULL) {
   $form = array();
 
@@ -193,7 +206,7 @@ function node_convert_add_template($form, &$form_state, $template = NULL) {
       $dest_fields = field_info_instances('node', $form_state['storage']['dest_type']);
       $i = 0;
       foreach ($source_fields as $source_field_name => $source_field) {
-        $i++;
+        ++$i;
         $options = array();
         $options['discard'] = 'discard';
         $options[APPEND_TO_BODY] = t('Append to body');
@@ -267,6 +280,9 @@ function node_convert_add_template($form, &$form_state, $template = NULL) {
   return $form;
 }
 
+/**
+ * Validation callback for adding a new template.
+ */
 function node_convert_add_template_validate($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_type') {
     if ($form_state['values']['source_type'] == $form_state['values']['dest_type']) {
@@ -280,6 +296,9 @@ function node_convert_add_template_validate($form, &$form_state) {
   }
 }
 
+/**
+ * Submit callback for adding a new template.
+ */
 function node_convert_add_template_submit($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_type') {
     $form_state['rebuild'] = TRUE;

@@ -5,6 +5,9 @@
  * Form page callbacks for the node_convert module.
  */
 
+/**
+ * Node conversion form.
+ */
 function node_convert_conversion_form($form, $form_state, $node) {
   $form = array();
 
@@ -69,7 +72,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
       $dest_fields = field_info_instances('node', $form_state['storage']['destination_type']);
       $i = 0;
       foreach ($source_fields as $source_field_name => $source_field) {
-        $i++;
+        ++$i;
         $options = array();
         $options['discard'] = 'discard';
         $options[APPEND_TO_BODY] = t('Append to body');
@@ -143,12 +146,18 @@ function node_convert_conversion_form($form, $form_state, $node) {
   return $form;
 }
 
+/**
+ * Validation callback for converting a form.
+ */
 function node_convert_conversion_form_validate($form, &$form_state) {
   if ($form_state['values']['step'] == 'choose_destination_fields') {
     node_convert_invoke_all('node_convert_change', array('dest_node_type' => $form_state['storage']['destination_type'], 'form_state' => $form_state), 'options validate');
   }
 }
 
+/**
+ * Submit callback for converting a form.
+ */
 function node_convert_conversion_form_submit($form, &$form_state) {
   // Remember the destination type
   if ($form_state['values']['step'] == 'choose_destination_type') {

@@ -181,6 +181,7 @@ function node_convert_action_info() {
       'type' => 'node',
       'configurable' => TRUE,
       'triggers' => array('any' => TRUE),
+      'behavior' => array('creates_property')
     ),
   );
 }

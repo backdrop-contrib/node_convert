@@ -1,0 +1,6 @@
+[NodeConvertTestCase]
+name = Node conversion
+description = Tests diverse aspects of Node Convert.
+group = Node Convert
+file = node_convert.test
+

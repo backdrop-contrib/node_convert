@@ -81,8 +81,8 @@ function node_convert_conversion_form($form, $form_state, $node) {
         // Insert destination type fields into $options that are of the same type as the source.
         foreach ($dest_fields as $dest_field_name => $dest_value) {
           if ($fields_info[$source_field_name]['type'] == $fields_info[$dest_field_name]['type']
-            || ($fields_info[$source_field_name]['type'] == 'text_with_summary' && $fields_info[$dest_field_name]['type'] == 'text_long')
-            || ($fields_info[$source_field_name]['type'] == 'text_long' && $fields_info[$dest_field_name]['type'] == 'text_with_summary')
+             || ($fields_info[$source_field_name]['type'] == 'text_with_summary' && $fields_info[$dest_field_name]['type'] == 'text_long')
+             || ($fields_info[$source_field_name]['type'] == 'text_long' && $fields_info[$dest_field_name]['type'] == 'text_with_summary')
             ) {
             $options[$dest_value['field_name']] = $dest_value['field_name'];
           }
@@ -95,7 +95,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
 
         $form['container_' . $i] = array(
           '#type' => 'container',
-          '#suffix' => '<br />'
+          '#suffix' => '<br />',
         );
 
         // The select populated with possible destination fields for each source field

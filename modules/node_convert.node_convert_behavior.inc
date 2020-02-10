@@ -6,7 +6,7 @@
 
 $provided_module_behaviors = node_convert_provided_module_behaviors();
 $node_convert_api_name = NODE_CONVERT_BEHAVIOR_PLUGIN;
-$path = DRUPAL_ROOT . '/' . drupal_get_path('module', 'node_convert') . '/modules/';
+$path = BACKDROP_ROOT . '/' . backdrop_get_path('module', 'node_convert') . '/modules/';
 
 foreach ($provided_module_behaviors as $module) {
   if (!function_exists("{$module}_node_convert_change")) {

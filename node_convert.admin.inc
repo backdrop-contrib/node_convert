@@ -103,8 +103,8 @@ function node_convert_template_delete_confirm_submit($form, &$form_state) {
       $none = serialize(array('template' => '0'));
       db_update('actions')
         ->fields(array(
-          'parameters' => $none,
-        ))
+        'parameters' => $none,
+      ))
         ->condition('callback', 'node_convert_convert_action')
         ->condition('parameters', '%template";s:%:"' . $form_state['values']['template_id'] . '%', 'LIKE')
         ->execute();
@@ -215,8 +215,8 @@ function node_convert_add_template($form, &$form_state, $template = NULL) {
         // Insert destination type fields into $options that are of the same type as the source.
         foreach ($dest_fields as $dest_field_name => $dest_field) {
           if ($fields_info[$source_field_name]['type'] == $fields_info[$dest_field_name]['type']
-            || ($fields_info[$source_field_name]['type'] == 'text_with_summary' && $fields_info[$dest_field_name]['type'] == 'text_long')
-            || ($fields_info[$source_field_name]['type'] == 'text_long' && $fields_info[$dest_field_name]['type'] == 'text_with_summary')
+             || ($fields_info[$source_field_name]['type'] == 'text_with_summary' && $fields_info[$dest_field_name]['type'] == 'text_long')
+             || ($fields_info[$source_field_name]['type'] == 'text_long' && $fields_info[$dest_field_name]['type'] == 'text_with_summary')
             ) {
             $options[$dest_field['field_name']] = $dest_field['field_name'];
           }
@@ -352,10 +352,10 @@ function node_convert_add_template_submit($form, &$form_state) {
     ctools_include('export');
     ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
     if ($is_editing_mode) {
-      drupal_set_message(t("Template updated successfully."));
+      backdrop_set_message(t("Template updated successfully."));
     }
     else {
-      drupal_set_message(t("Template created successfully."));
+      backdrop_set_message(t("Template created successfully."));
     }
 
     // @TODO Fix being able to create action when editing. Need to find template_id.

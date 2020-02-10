@@ -72,13 +72,13 @@ function node_convert_node_convert($nid, $destination_node_type, $source_fields,
 
   // TODO Check what to do about token cache clearing.
   /* if (module_exists('token')) {
-    token_get_values('global', NULL, TRUE);
-  }*/
+   token_get_values('global', NULL, TRUE);
+   }*/
 
   // Clear the node cache, so we have the latest information when saving the
   // node.
   $controller = entity_get_controller('node');
-  /* @var $controller DrupalEntityControllerInterface */
+  /* @var $controller BackdropEntityControllerInterface */
   $controller->resetCache(array($node->nid));
   cache_clear_all('field:node:' . $node->nid, 'cache_field');
 
@@ -94,7 +94,7 @@ function node_convert_node_convert($nid, $destination_node_type, $source_fields,
 
   }
   catch (Exception $e) {
-    drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())), 'error');
+    backdrop_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())), 'error');
     $nid = FALSE;
   }
 
@@ -239,8 +239,9 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   }
   try {
     module_invoke($db_info_destination['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_INSERT, $field_ids);
-  } catch (Exception $e) {
-    drupal_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())));
+  }
+  catch (Exception $e) {
+    backdrop_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())));
   }
   return NULL;
 }
@@ -274,13 +275,13 @@ function node_convert_messages($result, $params = array()) {
 
     watchdog(NODE_CONVERT_WATCHDOG, $message, $message_arguments, WATCHDOG_ERROR);
     // @ignore security_3
-    drupal_set_message(t($message, $message_arguments), 'error');
+    backdrop_set_message(t($message, $message_arguments), 'error');
   }
   elseif ($params['display_success'] == TRUE) {
     $message = 'Node @nid has been converted successfully.';
 
     // @ignore security_3
-    drupal_set_message(t($message, $message_arguments));
+    backdrop_set_message(t($message, $message_arguments));
     watchdog(NODE_CONVERT_WATCHDOG, $message, $message_arguments, WATCHDOG_INFO);
   }
 
@@ -302,65 +303,149 @@ function node_convert_format_field_value($node, $field, $no_labels = FALSE) {
   $options = array();
 
   if ($field['type'] == 'text') {
-    $options = array('singular_label' => 'Text', 'plural_label' => 'Texts', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'Text',
+      'plural_label' => 'Texts',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'text_with_summary') {
-    $options = array('singular_label' => 'Text w/Summary', 'plural_label' => 'Texts w/Summary', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'Text w/Summary',
+      'plural_label' => 'Texts w/Summary',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'image') {
-    $options = array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'Title' => 'title', 'URI' => 'uri'));
+    $options = array(
+      'singular_label' => 'File ID',
+      'plural_label' => 'File IDs',
+      'columns' => array(
+        'fid',
+        'Title' => 'title',
+        'URI' => 'uri',
+      ),
+    );
   }
   elseif ($field['type'] == 'link_field') {
-    $options = array('singular_label' => 'Link', 'plural_label' => 'Links', 'columns' => array('url', 'title'));
+    $options = array(
+      'singular_label' => 'Link',
+      'plural_label' => 'Links',
+      'columns' => array('url', 'title'),
+    );
   }
   elseif ($field['type'] == "email") {
-    $options = array('singular_label' => 'Email', 'plural_label' => 'Emails', 'columns' => array('email'));
+    $options = array(
+      'singular_label' => 'Email',
+      'plural_label' => 'Emails',
+      'columns' => array('email'),
+    );
   }
   elseif ($field['type'] == 'file') {
-    $options = array('singular_label' => 'File ID', 'plural_label' => 'File IDs', 'columns' => array('fid', 'URI' => 'uri'));
+    $options = array(
+      'singular_label' => 'File ID',
+      'plural_label' => 'File IDs',
+      'columns' => array('fid','URI' => 'uri'),
+    );
   }
   elseif ($field['type'] == 'taxonomy_term_reference') {
-    $options = array('singular_label' => 'Term ID', 'plural_label' => 'Term IDs', 'columns' => array('tid'));
+    $options = array(
+      'singular_label' => 'Term ID',
+      'plural_label' => 'Term IDs',
+      'columns' => array('tid'),
+    );
   }
   elseif ($field['type'] == 'node_reference') {
-    $options = array('singular_label' => 'Node ID', 'plural_label' => 'Node IDs', 'columns' => array('nid'));
+    $options = array(
+      'singular_label' => 'Node ID',
+      'plural_label' => 'Node IDs',
+      'columns' => array('nid'),
+    );
   }
   elseif ($field['type'] == 'user_reference') {
-    $options = array('singular_label' => 'User ID', 'plural_label' => 'User IDs', 'columns' => array('uid'));
+    $options = array(
+      'singular_label' => 'User ID',
+      'plural_label' => 'User IDs',
+      'columns' => array('uid'),
+    );
   }
   elseif ($field['type'] == 'entityreference') {
-    $options = array('singular_label' => 'Entity ID', 'plural_label' => 'Entity IDs', 'columns' => array('target_id'),
-      'prefix_label' => 'Entity Type: ' . $field['settings']['target_type']);
+    $options = array(
+      'singular_label' => 'Entity ID',
+      'plural_label' => 'Entity IDs',
+      'columns' => array('target_id'),
+      'prefix_label' => 'Entity Type: ' . $field['settings']['target_type'],
+    );
   }
   elseif ($field['type'] == 'date') {
-    $options = array('singular_label' => 'Date', 'plural_label' => 'Dates', 'columns' => array('value', 'timezone'));
+    $options = array(
+      'singular_label' => 'Date',
+      'plural_label' => 'Dates',
+      'columns' => array('value', 'timezone'),
+    );
   }
   elseif ($field['type'] == 'datestamp') {
-    $options = array('singular_label' => 'Date-stamp', 'plural_label' => 'Date-stamps', 'columns' => array('value', 'timezone'));
+    $options = array(
+      'singular_label' => 'Date-stamp',
+      'plural_label' => 'Date-stamps',
+      'columns' => array('value', 'timezone'),
+    );
   }
   elseif ($field['type'] == 'datetime') {
-    $options = array('singular_label' => 'Date-time', 'plural_label' => 'Date-time', 'columns' => array('value', 'timezone'));
+    $options = array(
+      'singular_label' => 'Date-time',
+      'plural_label' => 'Date-time',
+      'columns' => array('value', 'timezone'),
+    );
   }
   elseif ($field['type'] == 'number_decimal') {
-    $options = array('singular_label' => 'Decimal', 'plural_label' => 'Decimals', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'Decimal',
+      'plural_label' => 'Decimals',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'number_float') {
-    $options = array('singular_label' => 'Float', 'plural_label' => 'Floats', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'Float',
+      'plural_label' => 'Floats',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'number_integer') {
-    $options = array('singular_label' => 'Integer', 'plural_label' => 'Integers', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'Integer',
+      'plural_label' => 'Integers',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'list_boolean') {
-    $options = array('singular_label' => 'List Boolean', 'plural_label' => 'List Booleans', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'List Boolean',
+      'plural_label' => 'List Booleans',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'list_float') {
-    $options = array('singular_label' => 'List Float', 'plural_label' => 'List Floats', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'List Float',
+      'plural_label' => 'List Floats',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'list_integer') {
-    $options = array('singular_label' => 'List Integer', 'plural_label' => 'List Integers', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'List Integer',
+      'plural_label' => 'List Integers',
+      'columns' => array('value'),
+    );
   }
   elseif ($field['type'] == 'list_text') {
-    $options = array('singular_label' => 'List Text', 'plural_label' => 'List Texts', 'columns' => array('value'));
+    $options = array(
+      'singular_label' => 'List Text',
+      'plural_label' => 'List Texts',
+      'columns' => array('value'),
+    );
   }
   elseif (isset($field_values[0]['value'])) {
     $options['columns'] = array('value');

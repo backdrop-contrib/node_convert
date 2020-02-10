@@ -22,7 +22,11 @@ function comment_node_convert_change($data, $op) {
         SET cb.bundle = :new_bundle
         WHERE c.nid = :nid
         ';
-      $args = array(':entity_type' => 'comment', ':nid' => $node->nid, ':new_bundle' => 'comment_node_' . $data['dest_node_type']);
+      $args = array(
+        ':entity_type' => 'comment',
+        ':nid' => $node->nid,
+        ':new_bundle' => 'comment_node_' . $data['dest_node_type'],
+      );
       db_query($query, $args);
     }
   }

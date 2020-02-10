@@ -1,8 +1,6 @@
 name = Node Convert
 description = "Converts one or more nodes between different node types."
-core = 7.x
+backdrop = 1.x
+type = module
 dependencies[] = ctools
 
-files[] = node_convert.install
-files[] = node_convert.module
-files[] = node_convert.rules.inc

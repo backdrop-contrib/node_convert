@@ -5,7 +5,7 @@
  * Node convert book.module include
  *
  * Performs necessary changes regarding book type conversions.
- * @TODO Fix for Drupal 7.
+ * @TODO Fix for Backdrop 7.
  */
 
 /**

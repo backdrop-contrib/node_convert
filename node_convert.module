@@ -29,7 +29,7 @@ function node_convert_help($path, $arg) {
 
   switch ($path) {
     case "admin/help#node_convert":
-      $output .= '<p>' . t("This module allows to convert one or many nodes between different node types. It can transfer most fields, and node-specific options for book and forum types. Support of more basic types will be in future releases. Also the module provides an API for converting nodes and fields, hooks for processing additional options of custom node types, integrates with hook_node_operations and Drupal's Action API.") . '</p>';
+      $output .= '<p>' . t("This module allows to convert one or many nodes between different node types. It can transfer most fields, and node-specific options for book and forum types. Support of more basic types will be in future releases. Also the module provides an API for converting nodes and fields, hooks for processing additional options of custom node types, integrates with hook_node_operations and Backdrop's Action API.") . '</p>';
       $output .= '<p>' . t('<strong>I. Single node conversion:</strong>') . '</p>';
       $output .= t("<ol><li>Go to <a href=\"@permissions\">permissions page</a> and set 'administer conversion' and 'convert to x', 'convert from y' permissions.</li><li>Go to /node/x/convert and follow the provided steps to convert the node.</li></ol>", array('@permissions' => url('admin/user/permissions')));
       $output .= '<p>' . t('<strong>II. Multiple node conversion (using hook_node_operations):</strong>') . '</p>';
@@ -74,7 +74,7 @@ function node_convert_menu() {
 
   $items['node/%node/convert'] = array(
     'title' => 'Convert',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('node_convert_conversion_form', 1),
     'access callback' => 'node_convert_check_access',
     'access arguments' => array(1),
@@ -100,7 +100,7 @@ function node_convert_menu() {
 
   $items['admin/structure/node_convert_templates/add'] = array(
     'title' => 'Add template',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('node_convert_add_template'),
     'access arguments' => array('administer conversion'),
     'type' => MENU_LOCAL_TASK,
@@ -119,7 +119,7 @@ function node_convert_menu() {
 
   $items['admin/structure/node_convert_templates/edit/%node_convert_template'] = array(
     'title' => 'Edit template',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('node_convert_add_template', 4),
     'access arguments' => array('administer conversion'),
     'type' => MENU_CALLBACK,
@@ -128,7 +128,7 @@ function node_convert_menu() {
 
   $items['admin/structure/node_convert_templates/delete/%'] = array(
     'title' => 'Delete template',
-    'page callback' => 'drupal_get_form',
+    'page callback' => 'backdrop_get_form',
     'page arguments' => array('node_convert_template_delete_confirm', 4),
     'access arguments' => array('administer conversion'),
     'type' => MENU_CALLBACK,
@@ -181,7 +181,7 @@ function node_convert_action_info() {
       'type' => 'node',
       'configurable' => TRUE,
       'triggers' => array('any' => TRUE),
-      'behavior' => array('creates_property')
+      'behavior' => array('creates_property'),
     ),
   );
 }
@@ -209,13 +209,13 @@ function theme_node_convert_conversion_form($variables) {
   $form = $variables['form'];
   $output = '';
   if (isset($form['current_type'])) {
-    $output .= '<div>' . t("The current node type is:") . '<b>&nbsp;' . drupal_render($form['current_type']) . '</b></div>';
+    $output .= '<div>' . t("The current node type is:") . '<b>&nbsp;' . backdrop_render($form['current_type']) . '</b></div>';
   }
   // If there are no fields to convert, we notify the user
   if (isset($form['no_fields']['#value']) && $form['no_fields']['#value'] == TRUE) {
     $output .= '<div>' . t("There are no fields to convert. Please press Convert.") . '</div>';
   }
-  $output .= drupal_render_children($form);
+  $output .= backdrop_render_children($form);
   return $output;
 }
 
@@ -228,37 +228,37 @@ function theme_node_convert_add_template($variables) {
   $form = $variables['form'];
   if ($form['step']['#value'] == "choose_destination_type") {
     $output  = '<div>' . t("Choose the source type of the nodes that should be shown, and the destination type to which they will be converted.") . '</div>';
-    $output .= drupal_render_children($form);
+    $output .= backdrop_render_children($form);
   }
   elseif ($form['step']['#value'] == "choose_destination_fields") {
     $output = '';
     if ($form['no_fields']['#value'] == TRUE) {
       $output .= '<div>' . t("There are no fields to convert. Please press Create.") . '</div>';
     }
-    $output .= drupal_render_children($form);
+    $output .= backdrop_render_children($form);
   }
   return $output;
 }
 
 
 /**
- * Implements hook_action, exposing predefined conversion templates as actions.
+ * Implements hook_action, exposing predefined conversion templates as actions().
  */
 function node_convert_convert_action(&$node, &$context = array()) {
   if ($context['template'] === "0") {
-    drupal_set_message(t("Dummy template. No action is being performed."), 'warning', FALSE);
+    backdrop_set_message(t("Dummy template. No action is being performed."), 'warning', FALSE);
     return FALSE;
   }
   $template = node_convert_load_template($context['template']);
 
   $access = node_convert_check_template_permission_user(array('template' => $template));
   if ($access == FALSE) {
-    drupal_set_message(t("You don't have permission to use this conversion template"), 'warning', FALSE);
+    backdrop_set_message(t("You don't have permission to use this conversion template"), 'warning', FALSE);
     return FALSE;
   }
 
   if ($node->type != $template['source_type']) {
-    drupal_set_message(t("Node %nid doesn't match the template source type. Discarded.", array('nid' => $node->nid)), 'warning');
+    backdrop_set_message(t("Node %nid doesn't match the template source type. Discarded.", array('nid' => $node->nid)), 'warning');
   }
   else {
     $result = node_convert_node_convert($node->nid, $template['destination_type'], $template['data']['fields']['source'], $template['data']['fields']['destination'], $template['data']['no_fields'], $template['data']['hook_options']);
@@ -419,23 +419,23 @@ function node_convert_save_template($template_name, $machine_name, $source_type,
   if (!$is_editing_mode) {
     $id = db_insert(NODE_CONVERT_TEMPLATE_TABLE)
       ->fields(array(
-        'name' => $template_name,
-        'machine_name' => $machine_name,
-        'source_type' => $source_type,
-        'destination_type' => $destination_type,
-        'data' => $data,
-      ))
+      'name' => $template_name,
+      'machine_name' => $machine_name,
+      'source_type' => $source_type,
+      'destination_type' => $destination_type,
+      'data' => $data,
+    ))
       ->execute();
     $result = $id;
   }
   else {
     $rows_affected = db_update(NODE_CONVERT_TEMPLATE_TABLE)
       ->fields(array(
-        'name' => $template_name,
-        'source_type' => $source_type,
-        'destination_type' => $destination_type,
-        'data' => $data,
-      ))
+      'name' => $template_name,
+      'source_type' => $source_type,
+      'destination_type' => $destination_type,
+      'data' => $data,
+    ))
       ->condition('machine_name', $machine_name)
       ->execute();
     $result = $rows_affected;
@@ -487,7 +487,7 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
 
   $access = node_convert_check_template_permission_user(array('template' => $template));
   if ($access == FALSE) {
-    drupal_set_message(t("You don't have permission to use this conversion template."), 'warning', FALSE);
+    backdrop_set_message(t("You don't have permission to use this conversion template."), 'warning', FALSE);
     return FALSE;
   }
 
@@ -495,7 +495,7 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
     $node = node_load($nid);
     // The source type of the given node doesn't match the template one, so we discard it with a message
     if ($node->type != $template['source_type']) {
-      drupal_set_message(t("Node %nid doesn't match the template source type. Discarded.", array('%nid' => $node->nid)), 'warning');
+      backdrop_set_message(t("Node %nid doesn't match the template source type. Discarded.", array('%nid' => $node->nid)), 'warning');
     }
     else {
       $result = node_convert_node_convert($node->nid, $template['destination_type'], $template['data']['fields']['source'], $template['data']['fields']['destination'], $template['data']['no_fields'], $template['data']['hook_options']);
@@ -533,7 +533,7 @@ function _node_convert_recreate_identifiers() {
     $rows[] = $row;
   }
   foreach ($rows as $row) {
-    drupal_write_record(NODE_CONVERT_TEMPLATE_TABLE, $row, array('nctid'));
+    backdrop_write_record(NODE_CONVERT_TEMPLATE_TABLE, $row, array('nctid'));
   }
 }
 
@@ -576,7 +576,7 @@ function node_convert_ctools_plugin_api($module, $api) {
   if ($module == 'node_convert' && $api == NODE_CONVERT_BEHAVIOR_PLUGIN) {
     return array(
       'version' => node_convert_api_version(),
-      'path' => drupal_get_path('module', 'node_convert') . '/modules/',
+      'path' => backdrop_get_path('module', 'node_convert') . '/modules/',
       'file' => "$module.$api.inc",
     );
   }
@@ -594,7 +594,7 @@ function node_convert_provided_module_behaviors() {
 
   // Allow modules to disable behavior plugins implemented on behalf of
   // node convert.
-  drupal_alter(NODE_CONVERT_BEHAVIOR_PLUGIN, $provided_module_behaviors);
+  backdrop_alter(NODE_CONVERT_BEHAVIOR_PLUGIN, $provided_module_behaviors);
 
   return $provided_module_behaviors;
 }
@@ -638,4 +638,12 @@ function node_convert_invoke_all($hook, $data, $op) {
     }
   }
   return $return;
+}
+
+/**
+ * Implements hook_autoload_info().
+ */
+function node_convert_autoload_info() {
+  return array(
+  );
 }

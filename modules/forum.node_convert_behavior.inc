@@ -6,7 +6,7 @@
  *
  * Performs necessary changes regarding forum type conversions.
  *
- * @TODO Fix for Drupal 7.
+ * @TODO Fix for Backdrop 7.
  */
 
 /**
@@ -52,6 +52,7 @@ function forum_node_convert_change($data, $op) {
   elseif ($op == 'options') {
     $form = array();
     if ($data['dest_node_type'] == 'forum') {
+      // TODO This variable was removed in Backdrop without replacement.
       $vid = variable_get('forum_nav_vocabulary', '');
       $form['forum'] = taxonomy_form($vid);
       $form['forum']['#weight'] = 7;
@@ -63,6 +64,7 @@ function forum_node_convert_change($data, $op) {
   elseif ($op == 'options validate') {
     $form_state = $data['form_state'];
     if ($data['dest_node_type'] == 'forum') {
+      // TODO This variable was removed in Backdrop without replacement.
       $containers = variable_get('forum_containers', array());
       $term = $form_state['values']['hook_options']['forum'];
       if (in_array($term, $containers)) {

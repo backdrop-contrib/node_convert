@@ -17,7 +17,7 @@ function node_convert_schema() {
       'admin_title' => 'name',
       'primary key' => 'nctid',
       'identifier' => 'node_convert_template',
-      'default hook' => 'default_node_convert_templates',  // Function hook name.
+      'default hook' => 'default_node_convert_templates', // Function hook name.
       'delete callback' => 'node_convert_delete_template',
       'api' => array(
         'owner' => 'node_convert',
@@ -26,7 +26,6 @@ function node_convert_schema() {
         'current_version' => 1,
       ),
     ),
-
     'fields' => array(
       'nctid' => array(
         'type' => 'serial',
@@ -68,7 +67,7 @@ function node_convert_schema() {
 /**
  * Implements hook_install().
  */
-function node_convert_install() {}
+function node_convert_install() { }
 
 /**
  * Implements hook_uninstall().
@@ -80,24 +79,5 @@ function node_convert_uninstall() {
   ->execute();
 }
 
-/**
- * Create machine names for all node conversion templates.
- */
-function node_convert_update_7001() {
-  // Load the node convert module, so we have access to constants and API.
-  module_load_include('module', 'node_convert');
-
-  if (!db_field_exists(NODE_CONVERT_TEMPLATE_TABLE, 'machine_name')) {
-    // Add the new string machine name field for ctools.
-    db_add_field(NODE_CONVERT_TEMPLATE_TABLE, 'machine_name', array(
-      'type' => 'varchar',
-      'length' => 255,
-      'not null' => TRUE,
-      'default' => '',
-      'description' => 'The unique string identifier for a conversion template.',
-    ));
-    // Force drupal's schema to be rebuilt
-    drupal_get_schema(NODE_CONVERT_TEMPLATE_TABLE, TRUE);
-    _node_convert_recreate_identifiers();
-  }
-}
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function node_convert_update_7001() { }

@@ -14,8 +14,8 @@ function file_node_convert_change($data, $op) {
   if ($op == 'insert') {
     if (
       !empty($data['hook_options']['no_fields_flag'])
-      && isset($data['hook_options']['move_files'])
-      && $data['hook_options']['move_files'] == 1
+       && isset($data['hook_options']['move_files'])
+       && $data['hook_options']['move_files'] == 1
     ) {
       $node = clone($data['node']);
       $destination_type = $data['dest_node_type'];
@@ -30,24 +30,24 @@ function file_node_convert_change($data, $op) {
       // implement the behavior, your best best it to unset this file behavior
       // using hook_node_convert_behavior_alter(), and adding your own behavior.
       $file_types = array('file', 'image');
-      drupal_alter('file_node_convert_types', $file_types);
+      backdrop_alter('file_node_convert_types', $file_types);
 
       // Set the node type to the destination type, so that field_language, and
       // field_get_items return the correct language code.
       $node->type = $destination_type;
 
       // Clear the field language cache, so any new fields appear.
-      drupal_static_reset('field_language');
+      backdrop_static_reset('field_language');
 
       // Go through each field, and check if it's a file-like field, and it has
       // a non-empty file directory.
       foreach ($destination_fields as $i => $destination_field) {
         if (
           $destination_field != 'discard'
-          && isset($field_info[$destination_field]['type'])
-          && in_array($field_info[$destination_field]['type'], $file_types)
-          && isset($destination_instances[$destination_field]['settings']['file_directory'])
-          && !empty($destination_instances[$destination_field]['settings']['file_directory'])
+           && isset($field_info[$destination_field]['type'])
+           && in_array($field_info[$destination_field]['type'], $file_types)
+           && isset($destination_instances[$destination_field]['settings']['file_directory'])
+           && !empty($destination_instances[$destination_field]['settings']['file_directory'])
         ) {
           // Get the field values.
           $files = field_get_items('node', $node, $destination_field);

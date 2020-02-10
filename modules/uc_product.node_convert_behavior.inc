@@ -6,7 +6,7 @@
  *
  * Performs necessary changes regarding ubercart type conversions.
  *
- * @TODO Fix for Drupal 7.
+ * @TODO Fix for Backdrop 7.
  */
 
 /**

@@ -15,14 +15,14 @@ function node_convert_templates() {
   $headers = array(t("Name"), t('Machine name'), t("Source type"), t("Dest type"), t("Operations"));
   $templates = node_convert_load_all_templates();
   foreach ($templates as $row) {
-    $can_delete = isset($row->nctid);
-    $name = l($row->name, 'admin/structure/node_convert_templates/' . $row->machine_name);
+    $can_delete = isset($row['machine_name']);
+    $name = l($row['name'], 'admin/structure/node_convert_templates/' . $row['machine_name']);
     $operations = array();
     if ($can_delete) {
-      $operations[] = l(t("Edit"), 'admin/structure/node_convert_templates/edit/' . $row->nctid);
-      $operations[] = l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row->nctid);
+      $operations[] = l(t("Edit"), 'admin/structure/node_convert_templates/edit/' . $row['machine_name']);
+      $operations[] = l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row['machine_name']);
     }
-    $rows[] = array($name, $row->machine_name, $row->source_type, $row->destination_type, implode(' ', $operations));
+    $rows[] = array($name, $row['machine_name'], $row['source_type'], $row['destination_type'], implode(' ', $operations));
   }
   $output = theme('table', array('header' => $headers, 'rows' => $rows));
 
@@ -37,8 +37,7 @@ function node_convert_template_info($machine_name) {
   $rows = array();
   $headers = array(t("Property"), t("Value"));
   $row = node_convert_load_template($machine_name);
-  $template_id = isset($row['nctid']) ? $row['nctid'] : t('In Code');
-  $rows[] = array(t("Template id"), $template_id);
+  $template_machine_name = isset($row['machine_name']) ? $row['machine_name'] : t('In Code');
   $rows[] = array(t("Name"), $row['name']);
   $rows[] = array(t("Machine name"), $row['machine_name']);
   $rows[] = array(t("Source type"), $row['source_type']);
@@ -61,17 +60,17 @@ function node_convert_template_info($machine_name) {
 /**
  * Delete template confirmation form.
  */
-function node_convert_template_delete_confirm($form, &$form_state, $template_id) {
-  $form['template_id'] = array(
+function node_convert_template_delete_confirm($form, &$form_state, $template_machine_name) {
+  $form['machine_name'] = array(
     '#type' => 'value',
-    '#value' => $template_id,
+    '#value' => $template_machine_name,
   );
 
   $form['delete_action'] = array(
     '#type' => 'checkbox',
     '#title' => t("Delete action?"),
     '#default_value' => 1,
-    '#description' => t("If the option is checked, all actions that contain this template will be erased. Otheriwise, the actions' template will be set to none."),
+    '#description' => t("If the option is checked, all actions that contain this template will be erased. Otherwise, the action template will be set to none."),
   );
 
   return confirm_form($form,
@@ -88,26 +87,10 @@ function node_convert_template_delete_confirm($form, &$form_state, $template_id)
  */
 function node_convert_template_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    ctools_include('export');
-    $template = ctools_export_load_object(NODE_CONVERT_TEMPLATE_TABLE, 'conditions', array('nctid' => $form_state['values']['template_id']));
-    $template = array_shift($template);
+    $template = node_convert_load_template($form_state['values']['machine_name']);
     node_convert_delete_template($template);
-
-    if ($form_state['values']['delete_action'] == 1) {
-      db_delete('actions')
-        ->condition('callback', 'node_convert_convert_action')
-        ->condition('parameters', '%template";s:%:"' . $form_state['values']['template_id'] . '%', 'LIKE')
-        ->execute();
-    }
-    else {
-      $none = serialize(array('template' => '0'));
-      db_update('actions')
-        ->fields(array(
-        'parameters' => $none,
-      ))
-        ->condition('callback', 'node_convert_convert_action')
-        ->condition('parameters', '%template";s:%:"' . $form_state['values']['template_id'] . '%', 'LIKE')
-        ->execute();
+    if ($form_state['values']['delete_action']) {
+      node_convert_delete_action($form_state['values']['machine_name']);
     }
   }
   $form_state['redirect'] = 'admin/structure/node_convert_templates';
@@ -340,17 +323,15 @@ function node_convert_add_template_submit($form, &$form_state) {
     $data = serialize($data);
 
     $is_editing_mode = isset($form_state['storage']['is_editing_mode']);
-    $id = node_convert_save_template(
+    $template = node_convert_save_template(
       $form_state['storage']['template_name'],
       $form_state['storage']['machine_name'],
       $form_state['storage']['source_type'],
       $form_state['storage']['dest_type'],
       $data,
-      $is_editing_mode
+      $form_state['storage']['create_action']
     );
 
-    ctools_include('export');
-    ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
     if ($is_editing_mode) {
       backdrop_set_message(t("Template updated successfully."));
     }
@@ -358,10 +339,13 @@ function node_convert_add_template_submit($form, &$form_state) {
       backdrop_set_message(t("Template created successfully."));
     }
 
-    // @TODO Fix being able to create action when editing. Need to find template_id.
+    // @TODO Fix being able to create action when editing. Need to find template machine_name.
     if ($form_state['storage']['create_action'] == 1 && !$is_editing_mode) {
-      $template_id = $id;
-      actions_save('node_convert_convert_action', 'node', array('template' => $template_id), 'Convert ' . $form_state['storage']['template_name'], NULL);
+      if (module_exists('trigger_actions')) {
+        module_load_include('inc','trigger_actions','trigger_actions');
+        $action_id = 'node_convert_' . $form_state['storage']['machine_name'];
+        trigger_actions_save('node_convert_convert_action', 'node', array('template' => $template), 'Convert ' . $form_state['storage']['template_name'], 1, $form_state['storage']['source_type'], 0, '', $action_id);
+      }
     }
     // We clear the storage so redirect works
     $form_state['storage'] = array();

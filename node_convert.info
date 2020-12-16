@@ -1,6 +1,6 @@
 name = Node Convert
-description = "Converts one or more nodes between different node types."
+description = "Converts one or more pieces of content from one type to another."
 backdrop = 1.x
 type = module
-dependencies[] = ctools
 
+dependencies[] = trigger_actions

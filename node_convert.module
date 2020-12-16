@@ -21,27 +21,6 @@ define('NODE_CONVERT_BEHAVIOR_PLUGIN', 'node_convert_behavior');
 define('NODE_CONVERT_CHANGE_HOOK', 'node_convert_change');
 
 /**
- * Implements hook_help().
- */
-function node_convert_help($path, $arg) {
-
-  $output = '';
-
-  switch ($path) {
-    case "admin/help#node_convert":
-      $output .= '<p>' . t("This module allows to convert one or many nodes between different node types. It can transfer most fields, and node-specific options for book and forum types. Support of more basic types will be in future releases. Also the module provides an API for converting nodes and fields, hooks for processing additional options of custom node types, integrates with hook_node_operations and Backdrop's Action API.") . '</p>';
-      $output .= '<p>' . t('<strong>I. Single node conversion:</strong>') . '</p>';
-      $output .= t("<ol><li>Go to <a href=\"@permissions\">permissions page</a> and set 'administer conversion' and 'convert to x', 'convert from y' permissions.</li><li>Go to /node/x/convert and follow the provided steps to convert the node.</li></ol>", array('@permissions' => url('admin/user/permissions')));
-      $output .= '<p>' . t('<strong>II. Multiple node conversion (using hook_node_operations):</strong>') . '</p>';
-      $output .= t('<ol><li>Set appropriate permissions.</li><li>Go to <a href="@node_convert_templates">Node Convert templates</a>.</li><li>Create a new template following the the provided steps.</li><li>Go to the <a href="@content">content page</a>.</li><li>Select the correct nodes.</li><li>Choose "Convert template: x" (based on the template name created above) from the update options.</li><li>Click Update.</li></ol>', array('@node_convert_template' => url('admin/structure/node_convert_template'), '@content' => url('admin/content/node')));
-      $output .= '<p>' . t('<strong>III. Multiple node conversion (using Actions API + Views Bulk Operations):</strong><br />Note: This requires the contributed modules Views and Views Bulk Operations') . '</p>';
-      $output .= t('<ol><li>Set appropriate permissions.</li><li>Go to <a href="@node_convert_templates">Node Convert templates</a>.</li><li>Create a new template following the the provided steps (also check Create Action).</li><li>Create a new <a href="@view">view</a> with the options you require.</li><li>Select Views Bulk Operations as the style.</li><li>Configure all options as necessary</li><li>Select as an operation one of the convert templates.<br />Note: Most probably there will be duplicates of the same template, this is because VBO uses both Actions API and hook_node_operations to show possible operations</li><li>Save the view. View it.</li><li>Select the necessary nodes and click the Convert x button.</li></ol>', array('@node_convert_template' => url('admin/structure/node_convert_template'), '@view' => url('admin/structure/views')));
-      $output .= '<p>' . t('Useful API calls:<br />node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_fields, $no_fields_flag, $hook_options = NULL);<br />node_convert_field_convert($nid, $source_field, $dest_field);<br />hook_node_convert_change($data, $op);') . '</p>';
-      return $output;
-  }
-}
-
-/**
  * Implements hook_permission().
  */
 function node_convert_permission() {
@@ -175,7 +154,8 @@ function node_convert_node_operations() {
  * Implements hook_action_info().
  */
 function node_convert_action_info() {
-  return array(
+  /*
+  $actions = array(
     'node_convert_convert_action' => array(
       'label' => t("Convert a node"),
       'type' => 'node',
@@ -184,6 +164,26 @@ function node_convert_action_info() {
       'behavior' => array('creates_property'),
     ),
   );
+  */
+  $actions = array();
+  // Add actions for designated templates
+  $config_names = config_get_names_with_prefix('node_convert.template.');
+  foreach ($config_names as $config_name) {
+    $template_machine_name = str_replace('node_convert.template.', '', $config_name);
+    $create_action = config_get($config_name, 'create_action');
+    if (0 && $create_action) {
+      $label = t("Convert a node") . " " . config_get($config_name, 'name');
+      $actions['node_convert_' . $template_machine_name] = array(
+        'label' => $label,
+        'type' => 'node',
+        'configurable' => TRUE,
+        'triggers' => array('any' => TRUE),
+        'behavior' => array('creates_property'),
+      );
+    }
+  }
+  dpm($actions);
+  return $actions;
 }
 
 /**
@@ -245,6 +245,8 @@ function theme_node_convert_add_template($variables) {
  * Implements hook_action, exposing predefined conversion templates as actions().
  */
 function node_convert_convert_action(&$node, &$context = array()) {
+  dpm($node);
+  dpm($context);
   if ($context['template'] === "0") {
     backdrop_set_message(t("Dummy template. No action is being performed."), 'warning', FALSE);
     return FALSE;
@@ -274,12 +276,12 @@ function node_convert_convert_action(&$node, &$context = array()) {
  * Node convert action form.
  */
 function node_convert_convert_action_form($context) {
-  $result = db_query("SELECT * FROM {node_convert_templates}");
+  $result = node_convert_load_all_templates();
   $templates = array(0 => 'none');
   foreach ($result as $row) {
-    $access = node_convert_check_template_permission_user(array('template_id' => $row->nctid));
+    $access = node_convert_check_template_permission_user(array('template_machine_name' => $row['machine_name']));
     if ($access == TRUE) {
-      $templates[$row->nctid] = $row->name;
+      $templates[$row['machine_name']] = $row['name'];
     }
   }
   if (isset($context['template'])) {
@@ -288,7 +290,7 @@ function node_convert_convert_action_form($context) {
   $form['template'] = array(
     '#type' => 'select',
     '#title' => t("Template"),
-    '#description' => t("Convesion template to use when the action is fired."),
+    '#description' => t("Conversion template to use when the action is fired."),
     '#options' => $templates,
     '#default_value' => isset($default_template) ? $default_template : '',
   );
@@ -342,30 +344,26 @@ function node_convert_return_access_node_types($direction) {
 }
 
 /**
- * Loads a conversion template array using template_id.
+ * Loads a conversion template array using template_name.
  *
- * @param $template_id
- *   The template id to use
+ * @param $template_machine_name
+ *   The template machine name to use
  * @return array An array containing the template information or FALSE if there is no such template
  */
-function node_convert_load_template($template_id) {
-  // Use Ctools export API to fetch all presets from the DB as well as code.
-  ctools_include('export');
-  if ($template_id) {
-    $conditions = array();
-    if (is_numeric($template_id)) {
-      $conditions['nctid'] = $template_id;
-    }
-    elseif (is_string($template_id)) {
-      $conditions['machine_name'] = $template_id;
-    }
-    $templates = ctools_export_load_object(NODE_CONVERT_TEMPLATE_TABLE, 'conditions', $conditions);
-    $template = !empty($templates) ? array_shift($templates) : FALSE;
-    if (is_string($template->data)) {
-      $template->data = unserialize($template->data);
+function node_convert_load_template($template_machine_name) {
+  if ($template_machine_name && is_string($template_machine_name)) {
+    $template = array();
+    $config = config('node_convert.template.' . $template_machine_name);
+    $data = $config->get('data');
+    if (is_string($data)) {
+      $template['data'] = unserialize($data);
+      $template['machine_name'] = $template_machine_name;
+      $template['name'] = $config->get('name');
+      $template['source_type'] = $config->get('source_type');
+      $template['destination_type'] = $config->get('destination_type');
+      $template['action'] = $config->get('action');
     }
     if (!empty($template)) {
-      $template = (array) $template;
       return $template;
     }
   }
@@ -376,70 +374,63 @@ function node_convert_load_template($template_id) {
  * Loads all templates.
  */
 function node_convert_load_all_templates() {
-  ctools_include('export');
-  $templates = ctools_export_load_object(NODE_CONVERT_TEMPLATE_TABLE, 'all');
+  $templates = array();
+  $config_names = config_get_names_with_prefix('node_convert.template.');
+  foreach ($config_names as $config_name) {
+    $template_machine_name = str_replace('node_convert.template.', '', $config_name);
+    $templates[$template_machine_name] = node_convert_load_template($template_machine_name);
+  }
   return $templates;
 }
 
 /**
  * Delete a conversion template.
- * This function is also called by ctools export when calls are
- * made through ctools_export_crud_delete().
  *
  * @param $template
  *   A conversion template.
- * @param $ctools_crud
- *  Is this function called by the ctools crud delete.
  */
-function node_convert_delete_template($template, $ctools_crud = TRUE) {
-  $query = db_delete('node_convert_templates');
+function node_convert_delete_template($template) {
+  $template_machine_name = NULL;
 
-  if (is_object($template) && isset($template->nctid)) {
-    $query->condition('nctid', $template->nctid);
-  }
-  elseif (is_array($template) && isset($template['template_id'])) {
-    $query->condition('nctid', $template['template_id']);
+  if (is_array($template) && isset($template['machine_name'])) {
+    $template_machine_name = $template['machine_name'];
   }
   elseif (is_string($template)) {
-    $template_name = $template;
-    $query->condition('machine_name', $template_name);
+    $template_machine_name = $template;
   }
+  if ($template_machine_name) {
+    config('node_convert.template.' . $template_machine_name)->delete();
+  }
+}
 
-  $query->execute();
-
-  ctools_include('export');
-  ctools_export_load_object_reset(NODE_CONVERT_TEMPLATE_TABLE);
+/**
+  * Delete an action.
+  *
+  * string @param $template_machine_name
+  *   A conversion template machine name.
+  */
+function node_convert_delete_action($template_machine_name) {
+  if (is_string($template_machine_name) && module_exists('trigger_actions')) {
+    module_load_include('inc','trigger_actions','trigger_actions');
+    $action_id = 'node_convert_' . $template_machine_name;
+    trigger_actions_delete($action_id);
+  }
 }
 
 /**
  * Saves a conversion template.
  */
-function node_convert_save_template($template_name, $machine_name, $source_type, $destination_type, $data, $is_editing_mode = FALSE) {
+function node_convert_save_template($template_name, $machine_name, $source_type, $destination_type, $data, $create_action = FALSE) {
   $result = NULL;
-  if (!$is_editing_mode) {
-    $id = db_insert(NODE_CONVERT_TEMPLATE_TABLE)
-      ->fields(array(
-      'name' => $template_name,
-      'machine_name' => $machine_name,
-      'source_type' => $source_type,
-      'destination_type' => $destination_type,
-      'data' => $data,
-    ))
-      ->execute();
-    $result = $id;
-  }
-  else {
-    $rows_affected = db_update(NODE_CONVERT_TEMPLATE_TABLE)
-      ->fields(array(
-      'name' => $template_name,
-      'source_type' => $source_type,
-      'destination_type' => $destination_type,
-      'data' => $data,
-    ))
-      ->condition('machine_name', $machine_name)
-      ->execute();
-    $result = $rows_affected;
-  }
+  $config = config('node_convert.template.' . $machine_name);
+  $config->set('name', $template_name);
+  $config->set('machine_name', $machine_name);
+  $config->set('source_type', $source_type);
+  $config->set('destination_type', $destination_type);
+  $config->set('data', $data);
+  $config->set('create_action', $create_action);
+  $config->save();
+  $result = $machine_name;
   return $result;
 }
 
@@ -448,7 +439,7 @@ function node_convert_save_template($template_name, $machine_name, $source_type,
  *
  * @param $data
  *   An array containing either of the following keys
- *   - template_id The template id used for conversion
+ *   - template_machine_name The template machine name used for conversion
  *   - template  The template array containing data
  * @return
  *    TRUE if user can use the template, FALSE otherwise.
@@ -457,8 +448,8 @@ function node_convert_check_template_permission_user($data) {
   if (!empty($data['template'])) {
     $template = $data['template'];
   }
-  elseif (!empty($data['template_id'])) {
-    $template = node_convert_load_template($data['template_id']);
+  elseif (!empty($data['template_machine_name'])) {
+    $template = node_convert_load_template($data['template_machine_name']);
   }
   else {
     return FALSE;
@@ -511,11 +502,8 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
  * Callback to check if an existing machine name for a template exists.
  */
 function node_convert_machine_name_check($machine_name) {
-  $query = db_select(NODE_CONVERT_TEMPLATE_TABLE, 'n');
-  $query->addField('n', 'nctid');
-  $query->condition('machine_name', $machine_name);
-  $template = $query->execute()->fetchAssoc();
-  return $template;
+  $config = config('node_convert.template.' . $machine_name);
+  return $config->machine_name;
 }
 
 
@@ -538,18 +526,10 @@ function _node_convert_recreate_identifiers() {
 }
 
 /**
- * Minimum version for API.
- */
-function node_convert_api_minimum_version() {
-  return '1';
-}
-
-/**
- * Current version for API.
- */
-function node_convert_api_version() {
-  return '1';
-}
+  * Implements hook_node_convert_node_convert().
+  */
+  
+  
 
 /**
  * Loads include files, that execute various behaviors on node conversion.
@@ -557,31 +537,7 @@ function node_convert_api_version() {
  * These can also be defined by other modules.
  */
 function node_convert_load_includes() {
-  ctools_include('plugins');
-  return ctools_plugin_api_include('node_convert', NODE_CONVERT_BEHAVIOR_PLUGIN, node_convert_api_minimum_version(), node_convert_api_version());
-}
-
-/**
- * Implements hook_ctools_plugin_api().
- *
- * Tell CTools that we support default conversion templates, and also custom behaviors.
- */
-function node_convert_ctools_plugin_api($module, $api) {
-  // Default conversion templates.
-  if ($module == 'node_convert' && $api == 'node_convert') {
-    return array('version' => node_convert_api_version());
-  }
-
-  // Conversion behaviors.
-  if ($module == 'node_convert' && $api == NODE_CONVERT_BEHAVIOR_PLUGIN) {
-    return array(
-      'version' => node_convert_api_version(),
-      'path' => backdrop_get_path('module', 'node_convert') . '/modules/',
-      'file' => "$module.$api.inc",
-    );
-  }
-
-  return NULL;
+  module_load_include('inc', 'node_convert', 'util');
 }
 
 /**
@@ -600,7 +556,7 @@ function node_convert_provided_module_behaviors() {
 }
 
 /**
- * Instead of using module_invoke_all, we have to use the ctools pattern, because the module hooks are loaded dynamically by CTools.
+ * Implements module_invoke_all().
  *
  * Additionally we add in a few other modules, for which we provide API integration.
  *
@@ -638,12 +594,4 @@ function node_convert_invoke_all($hook, $data, $op) {
     }
   }
   return $return;
-}
-
-/**
- * Implements hook_autoload_info().
- */
-function node_convert_autoload_info() {
-  return array(
-  );
 }

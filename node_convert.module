@@ -138,7 +138,7 @@ function node_convert_node_operations() {
   $operations = array();
   $templates = node_convert_load_all_templates();
   foreach ($templates as $row) {
-    $access = node_convert_check_template_permission_user(array('template_id' => $row->machine_name));
+    $access = node_convert_check_template_permission_user(array('template_machine_name' =>  $row->machine_name));
     if ($access) {
       $operations['node_convert_' . $row->machine_name] = array(
         'label' => 'Convert template: ' . $row->name,
@@ -182,8 +182,7 @@ function node_convert_action_info() {
       );
     }
   }
-  dpm($actions);
-  return $actions;
+  // return $actions;
 }
 
 /**
@@ -245,22 +244,20 @@ function theme_node_convert_add_template($variables) {
  * Implements hook_action, exposing predefined conversion templates as actions().
  */
 function node_convert_convert_action(&$node, &$context = array()) {
-  dpm($node);
-  dpm($context);
   if ($context['template'] === "0") {
     backdrop_set_message(t("Dummy template. No action is being performed."), 'warning', FALSE);
     return FALSE;
   }
-  $template = node_convert_load_template($context['template']);
+  $template = node_convert_load_template($context['template_machine_name']);
 
-  $access = node_convert_check_template_permission_user(array('template' => $template));
+  $access = node_convert_check_template_permission_user(array('template_machine_name' => $context['template_machine_name']));
   if ($access == FALSE) {
     backdrop_set_message(t("You don't have permission to use this conversion template"), 'warning', FALSE);
     return FALSE;
   }
 
   if ($node->type != $template['source_type']) {
-    backdrop_set_message(t("Node %nid doesn't match the template source type. Discarded.", array('nid' => $node->nid)), 'warning');
+    backdrop_set_message(t("Node %nid doesn't match the template source type. It was not converted.", array('nid' => $node->nid)), 'warning');
   }
   else {
     $result = node_convert_node_convert($node->nid, $template['destination_type'], $template['data']['fields']['source'], $template['data']['fields']['destination'], $template['data']['no_fields'], $template['data']['hook_options']);
@@ -476,7 +473,7 @@ function node_convert_check_template_permission_user($data) {
 function node_convert_convert_nodes_using_template($nodes, $template_id) {
   $template = node_convert_load_template($template_id);
 
-  $access = node_convert_check_template_permission_user(array('template' => $template));
+  $access = node_convert_check_template_permission_user(array('template_machine_name' =>  $template_id));
   if ($access == FALSE) {
     backdrop_set_message(t("You don't have permission to use this conversion template."), 'warning', FALSE);
     return FALSE;

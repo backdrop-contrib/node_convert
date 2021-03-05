@@ -50,8 +50,8 @@ function node_convert_node_convert($nid, $destination_node_type, $source_fields,
     if ($re_save_body_field == TRUE) {
       $field_body = field_info_fields();
       $field_body = $field_body['body'];
-      $field_ids = array($field_body['id'] => $field_body['id']);
-      module_invoke($field_body['storage']['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_UPDATE, $field_ids);
+      $field_names = array($field_body['field_name'] => $field_body['field_name']);
+      module_invoke($field_body['storage']['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_UPDATE, $field_names);
     }
   }
   // We collate data to send to the hook implementations
@@ -218,7 +218,7 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
   // We put each field value back into the DB
   // To do it we first get the id of the field, then we find its language code from the source value
   // We add $source_values into the node object, and invoke field_storage write
-  $field_ids = array($field_info_destination['id'] => $field_info_destination['id']);
+  $field_names = array($field_info_destination['field_name'] => $field_info_destination['field_name']);
   $lang_code = field_language('node', $node, $source_field);
 
   // Make sure that we actually have values in the source field
@@ -238,7 +238,7 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
     link_field_update('node', $node, $field_info_destination, $instances[$destination_field], $lang_code, $node->{$destination_field}[$lang_code]);
   }
   try {
-    module_invoke($db_info_destination['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_INSERT, $field_ids);
+    module_invoke($db_info_destination['module'], 'field_storage_write', 'node', $node, FIELD_STORAGE_INSERT, $field_names);
   }
   catch (Exception $e) {
     backdrop_set_message(t('Caught exception: @exception', array('@exception' => $e->getMessage())));
@@ -250,8 +250,8 @@ function node_convert_field_convert(&$node, $source_field, $destination_field, $
  * Invokes the storage delete field hooks for a given field.
  */
 function node_convert_invoke_field_storage_delete($field_info_source, $db_info_source, $node) {
-  $field_id = $field_info_source['id'];
-  module_invoke($db_info_source['module'], 'field_storage_delete', 'node', $node, array($field_id => $field_id));
+  $field_name = $field_info_source['field_name'];
+  module_invoke($db_info_source['module'], 'field_storage_delete', 'node', $node, array($field_name => $field_name));
 }
 
 /**

@@ -244,7 +244,7 @@ function theme_node_convert_add_template($variables) {
  * Implements hook_action, exposing predefined conversion templates as actions().
  */
 function node_convert_convert_action(&$node, &$context = array()) {
-  if ($context['template'] === "0") {
+  if (isset($context['template']) && $context['template'] === "0") {
     backdrop_set_message(t("Dummy template. No action is being performed."), 'warning', FALSE);
     return FALSE;
   }
@@ -500,7 +500,7 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
  */
 function node_convert_machine_name_check($machine_name) {
   $config = config('node_convert.template.' . $machine_name);
-  return $config->machine_name;
+  return (!empty($config->machine_name)) ? $config->machine_name : FALSE;
 }
 
 
@@ -525,8 +525,8 @@ function _node_convert_recreate_identifiers() {
 /**
   * Implements hook_node_convert_node_convert().
   */
-  
-  
+
+
 
 /**
  * Loads include files, that execute various behaviors on node conversion.
@@ -564,10 +564,12 @@ function node_convert_provided_module_behaviors() {
  */
 function node_convert_invoke_all($hook, $data, $op) {
   $return = array();
+  node_convert_load_includes();
 
   $provided_modules = node_convert_provided_module_behaviors();
   $provided_modules = array_combine($provided_modules, $provided_modules);
-  $other_modules = node_convert_load_includes();
+  // @todo: add in array of all modules that are using the API integration
+  $other_modules = array();
   $all_modules = array_merge($provided_modules, $other_modules);
 
   foreach ($all_modules as $module => $info) {

@@ -20,32 +20,17 @@ Basic instructions are below. More details may be found (or added) in the [Wiki]
 
 ### Single node conversion:
 1) Set 'administer conversion' and 'convert to x', 'convert from y' permissions.
-2) Go to /node/x/convert and follow the provided steps to convert the node.
+2) Go to **node/x/convert** and follow the provided steps to convert the node.
 
-### Multiple node conversion (using hook_node_operations)
+### Multiple node conversion:
 1) Set appropriate permissions.
 2) Go to **admin/structure/node_convert_templates**
 3) Create a new template following the the provided steps.
 4) Go to **admin/content**
 5) Select the relevant nodes.
-6) Choose "Convert template: x" (based on the template name created above) from the update options.
-7) Click Update.
-
-### Multiple node conversion (using Actions API + Views Bulk Operations)
-*Note: This requires the contributed modules Views and Views Bulk Operations*
-
-1) Set appropriate permissions.
-2) Go to **admin/structure/node_convert_templates**
-3) Create a new template following the the provided steps (also check Create Action).
-4) Create a new view with the options you require.
-5) Add Views Bulk Operations under fields.
-6) Configure all options of Bulk Operations as necessary.
-7) Select "Convert content" as an operation or an action that was created together with the conversion template.
-   Note that VBO Operations are gathered from two sources:
-  - Backdrop core actions (hook_action_info() and advanced actions added through the Actions UI)
-  - Rules
-8) Save the view. View it.
-9) Select the necessary nodes and click the Convert x button.
+6) Choose "Convert content" from the update options and click "Execute"
+7) Select the conversion template you wish to use.
+8) Click Update.
 
 ## Issues
 

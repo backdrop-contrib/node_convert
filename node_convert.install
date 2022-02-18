@@ -78,6 +78,3 @@ function node_convert_uninstall() {
   ->condition('callback', 'node_convert_convert_action')
   ->execute();
 }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function node_convert_update_7001() { }

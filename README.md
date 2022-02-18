@@ -7,7 +7,7 @@ reference, node / term / user reference.
 The module provides:
 - an API for converting nodes
 - hooks for executing additional behaviors on conversion
-- integrates with hook_node_operations and Drupal's Action API
+- integrates with hook_node_operations and Backdrop's Action API
 - integration with Rules
 
 ## Installation
@@ -40,7 +40,7 @@ Basic instructions are below. More details may be found (or added) in the [Wiki]
 4) Create a new view with the options you require.
 5) Add Views Bulk Operations under fields.
 6) Configure all options of Bulk Operations as necessary.
-7) Select "Convert a node" as an operation or an action that was created together with the conversion template.
+7) Select "Convert content" as an operation or an action that was created together with the conversion template.
    Note that VBO Operations are gathered from two sources:
   - Backdrop core actions (hook_action_info() and advanced actions added through the Actions UI)
   - Rules

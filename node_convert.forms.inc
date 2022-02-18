@@ -99,7 +99,8 @@ function node_convert_conversion_form($form, $form_state, $node) {
         );
 
         // The select populated with possible destination fields for each source field
-        // If the destination node type has the same field as the source node type, the default value is set to it.
+        // If the destination node type has the same field as the source node
+        // type, the default value is set to it.
         $form['container_' . $i]['dest_field_' . $i] = array(
           '#type' => 'select',
           '#options' => $options,

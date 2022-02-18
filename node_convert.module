@@ -62,6 +62,16 @@ function node_convert_menu() {
     'file' => NODE_CONVERT_FORMS_INC,
   );
 
+  $items['admin/content/convert'] = array(
+    'title' => 'Convert content',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('node_convert_convert_action_confirm'),
+    'access callback' => 'node_convert_check_access',
+    'access arguments' => array(1),
+    'weight' => 6,
+    'type' => MENU_CALLBACK,
+  );
+
   $items['admin/structure/node_convert_templates'] = array(
     'title' => 'Node Convert templates',
     'description' => 'List of templates used for converting nodes using Actions and Node Operations.',
@@ -154,35 +164,16 @@ function node_convert_node_operations() {
  * Implements hook_action_info().
  */
 function node_convert_action_info() {
-  /*
   $actions = array(
     'node_convert_convert_action' => array(
-      'label' => t("Convert a node"),
+      'label' => t("Convert content"),
       'type' => 'node',
-      'configurable' => TRUE,
-      'triggers' => array('any' => TRUE),
-      'behavior' => array('creates_property'),
+      'callback' => 'node_convert_convert_action',
+      'file' => 'user.actions.inc',
+      'weight' => 10,
     ),
   );
-  */
-  $actions = array();
-  // Add actions for designated templates
-  $config_names = config_get_names_with_prefix('node_convert.template.');
-  foreach ($config_names as $config_name) {
-    $template_machine_name = str_replace('node_convert.template.', '', $config_name);
-    $create_action = config_get($config_name, 'create_action');
-    if (0 && $create_action) {
-      $label = t("Convert a node") . " " . config_get($config_name, 'name');
-      $actions['node_convert_' . $template_machine_name] = array(
-        'label' => $label,
-        'type' => 'node',
-        'configurable' => TRUE,
-        'triggers' => array('any' => TRUE),
-        'behavior' => array('creates_property'),
-      );
-    }
-  }
-  // return $actions;
+  return $actions;
 }
 
 /**
@@ -241,65 +232,106 @@ function theme_node_convert_add_template($variables) {
 
 
 /**
- * Implements hook_action, exposing predefined conversion templates as actions().
+ * Queues a specific node for conversion.
+ *
+ * @param Node $node
+ *   The node that will be converted.
+ *
+ * @ingroup actions
  */
-function node_convert_convert_action(&$node, &$context = array()) {
-  if (isset($context['template']) && $context['template'] === "0") {
-    backdrop_set_message(t("Dummy template. No action is being performed."), 'warning', FALSE);
-    return FALSE;
+function node_convert_convert_action($node, &$context = array()) {
+  // Save the list of nodes to be converted in the session. Append to
+  // the existing list if within the last minute, otherwise start a new list
+  // of nodes.
+  $last_action_time = 0;
+  if (isset($_SESSION['node_convert_action'])) {
+    $last_action_time = $_SESSION['node_convert_action']['timestamp'];
   }
-  $template = node_convert_load_template($context['template_machine_name']);
+  if (REQUEST_TIME - $last_action_time > 60) {
+    $_SESSION['node_convert_action'] = array(
+      'timestamp' => REQUEST_TIME,
+      'nids' => array(),
+    );
+  }
 
-  $access = node_convert_check_template_permission_user(array('template_machine_name' => $context['template_machine_name']));
-  if ($access == FALSE) {
-    backdrop_set_message(t("You don't have permission to use this conversion template"), 'warning', FALSE);
-    return FALSE;
-  }
+  $_SESSION['node_convert_action']['nids'][] = $node->nid;
 
-  if ($node->type != $template['source_type']) {
-    backdrop_set_message(t("Node %nid doesn't match the template source type. It was not converted.", array('nid' => $node->nid)), 'warning');
-  }
-  else {
-    $result = node_convert_node_convert($node->nid, $template['destination_type'], $template['data']['fields']['source'], $template['data']['fields']['destination'], $template['data']['no_fields'], $template['data']['hook_options']);
-    // We display errors if any, or the default success message
-    node_convert_messages($result, array('nid' => $node->nid));
-    // This is node_load is necessary. It loads the new data from the DB, which gets passed down the action chain by reference, where it is saved.
-    $node = node_load($node->nid, NULL, TRUE);
-  }
-  return TRUE;
+  $context['redirect'] = 'admin/content/convert';
 }
 
 /**
  * Node convert action form.
  */
-function node_convert_convert_action_form($context) {
+function node_convert_convert_action_confirm($form, &$form_state) {
+  if (isset($_SESSION['node_convert_action']['timestamp']) && (REQUEST_TIME - $_SESSION['node_convert_action']['timestamp'] < 6000)) {
+    $nids = $_SESSION['node_convert_action']['nids'];
+  }
+  else {
+    $nids = array();
+  }
+
+  $nodes = node_load_multiple($nids);
+
+  if (empty($nodes)) {
+    $destination = isset($_GET['destination']) ? $_GET['destination'] : 'admin/content';
+    $form['empty']['#markup'] = '<p>' . t('Return to the <a href="!url">content administration page</a>.', array('!url' => url($destination))) . '</p>';
+    backdrop_set_message(t('No content has been selected for conversion.'), 'error');
+    return $form;
+  }
+
+  $form_state['nodes'] = $nodes;
+
+  $form['node_list'] = array(
+    '#theme' => 'item_list',
+    '#items' => array(),
+  );
+  foreach ($nodes as $node) {
+    $form['node_list']['#items'][] = check_plain($node->title) . ' (' . $node->type . ')';
+  }
+
   $result = node_convert_load_all_templates();
-  $templates = array(0 => 'none');
+  $templates = array();
   foreach ($result as $row) {
     $access = node_convert_check_template_permission_user(array('template_machine_name' => $row['machine_name']));
     if ($access == TRUE) {
       $templates[$row['machine_name']] = $row['name'];
     }
   }
-  if (isset($context['template'])) {
-    $default_template = $context['template'];
+  if (empty($templates)) {
+    $destination = isset($_GET['destination']) ? $_GET['destination'] : 'admin/content';
+    $form['empty']['#markup'] = '<p>' . t('Return to the <a href="!url">content administration page</a>.', array('!url' => url($destination))) . '</p>';
+    backdrop_set_message(t('No conversion templates have been set up. <a href="!url">Create a template</a>.', array(
+          '!url' => url('admin/structure/node_convert_templates/add',
+          array(
+            'query' => array(
+              'destination' => 'admin/content/convert',
+            ),
+          ),
+        ),
+      ),
+    ), 'error');
+    return $form;
   }
   $form['template'] = array(
     '#type' => 'select',
     '#title' => t("Template"),
-    '#description' => t("Conversion template to use when the action is fired."),
+    '#description' => t("Conversion template to use."),
     '#options' => $templates,
     '#default_value' => isset($default_template) ? $default_template : '',
   );
 
-  return $form;
+  $confirm_question = format_plural(count($nodes), 'Are you sure you want to convert this content item?', 'Are you sure you want to convert these content items?');
+  return confirm_form($form, $confirm_question, 'admin/content', NULL, t('Convert content'), t('Cancel'));
 }
 
 /**
  * Submit callback for the node convert action form.
  */
-function node_convert_convert_action_submit($form, &$form_state) {
-  return array('template' => $form_state['values']['template']);
+function node_convert_convert_action_confirm_submit($form, &$form_state) {
+  $template_id = check_plain($form_state['values']['template']);
+  $nids = $_SESSION['node_convert_action']['nids'];
+  node_convert_convert_nodes_using_template($nids, $template_id);
+  $form_state['redirect'] = 'admin/content';
 }
 
 
@@ -341,7 +373,7 @@ function node_convert_return_access_node_types($direction) {
 }
 
 /**
- * Loads a conversion template array using template_name.
+ * Loads a conversion template array using template_machine_name.
  *
  * @param $template_machine_name
  *   The template machine name to use
@@ -371,11 +403,14 @@ function node_convert_load_template($template_machine_name) {
  * Loads all templates.
  */
 function node_convert_load_all_templates() {
-  $templates = array();
-  $config_names = config_get_names_with_prefix('node_convert.template.');
-  foreach ($config_names as $config_name) {
-    $template_machine_name = str_replace('node_convert.template.', '', $config_name);
-    $templates[$template_machine_name] = node_convert_load_template($template_machine_name);
+  $templates = &backdrop_static(__FUNCTION__);
+  if (!isset($templates)) {
+    $templates = array();
+    $config_names = config_get_names_with_prefix('node_convert.template.');
+    foreach ($config_names as $config_name) {
+      $template_machine_name = str_replace('node_convert.template.', '', $config_name);
+      $templates[$template_machine_name] = node_convert_load_template($template_machine_name);
+    }
   }
   return $templates;
 }
@@ -401,23 +436,9 @@ function node_convert_delete_template($template) {
 }
 
 /**
-  * Delete an action.
-  *
-  * string @param $template_machine_name
-  *   A conversion template machine name.
-  */
-function node_convert_delete_action($template_machine_name) {
-  if (is_string($template_machine_name) && module_exists('trigger_actions')) {
-    module_load_include('inc','trigger_actions','trigger_actions');
-    $action_id = 'node_convert_' . $template_machine_name;
-    trigger_actions_delete($action_id);
-  }
-}
-
-/**
  * Saves a conversion template.
  */
-function node_convert_save_template($template_name, $machine_name, $source_type, $destination_type, $data, $create_action = FALSE) {
+function node_convert_save_template($template_name, $machine_name, $source_type, $destination_type, $data) {
   $result = NULL;
   $config = config('node_convert.template.' . $machine_name);
   $config->set('name', $template_name);
@@ -425,7 +446,6 @@ function node_convert_save_template($template_name, $machine_name, $source_type,
   $config->set('source_type', $source_type);
   $config->set('destination_type', $destination_type);
   $config->set('data', $data);
-  $config->set('create_action', $create_action);
   $config->save();
   $result = $machine_name;
   return $result;
@@ -481,13 +501,14 @@ function node_convert_convert_nodes_using_template($nodes, $template_id) {
 
   foreach ($nodes as $nid) {
     $node = node_load($nid);
-    // The source type of the given node doesn't match the template one, so we discard it with a message
+    // The source type of the given node doesn't match the template one, so we
+    // discard it with a message.
     if ($node->type != $template['source_type']) {
-      backdrop_set_message(t("Node %nid doesn't match the template source type. Discarded.", array('%nid' => $node->nid)), 'warning');
+      backdrop_set_message(t("\"%title\" (ID %nid) doesn't match the template's specified source type. It has not been converted.", array('%title' => $node->title, '%nid' => $node->nid)), 'warning', FALSE);
     }
     else {
       $result = node_convert_node_convert($node->nid, $template['destination_type'], $template['data']['fields']['source'], $template['data']['fields']['destination'], $template['data']['no_fields'], $template['data']['hook_options']);
-      // We display errors if there are any, or the default success message
+      // We display errors if there are any, or the default success message.
       node_convert_messages($result, array('nid' => $nid));
     }
   }
@@ -578,8 +599,8 @@ function node_convert_invoke_all($hook, $data, $op) {
     }
 
     $function = $module . '_' . $hook;
-    // Just because they implement the API and include a file does not guarantee they implemented
-    // a hook function!
+    // Just because they implement the API and include a file does not guarantee
+    // they implemented a hook function!
     if (!function_exists($function)) {
       continue;
     }

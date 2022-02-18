@@ -2,5 +2,3 @@ name = Node Convert
 description = "Converts one or more pieces of content from one type to another."
 backdrop = 1.x
 type = module
-
-dependencies[] = trigger_actions

@@ -27,7 +27,7 @@ function node_convert_rules_event_info() {
 function node_convert_rules_action_info() {
   $actions = array();
   $actions['node_convert_convert_nodes_using_template_rules_callback'] = array(
-    'label' => t('Convert a node'),
+    'label' => t('Convert content'),
     'group' => t('Node'),
     'parameter' => array(
       'template' => array(
@@ -37,7 +37,7 @@ function node_convert_rules_action_info() {
       ),
       'node' => array(
         'type' => 'node',
-        'label' => t('Node to convert'),
+        'label' => t('Content to convert'),
       ),
     ),
   );

@@ -12,17 +12,45 @@
  */
 function node_convert_templates() {
   $rows = array();
-  $headers = array(t("Name"), t('Machine name'), t("Source type"), t("Dest type"), t("Operations"));
+  $headers = array(
+    t("Name"),
+    t("Source type"),
+    t("Dest type"),
+    t("Operations"),
+  );
   $templates = node_convert_load_all_templates();
   foreach ($templates as $row) {
-    $can_delete = isset($row['machine_name']);
-    $name = l($row['name'], 'admin/structure/node_convert_templates/' . $row['machine_name']);
+    $name = theme('label_machine_name__node_convert', array(
+      'label' => $row['name'],
+      'machine_name' => $row['machine_name'],
+    ));
+    //l($row['name'], 'admin/structure/node_convert_templates/' . $row['machine_name']);
     $operations = array();
-    if ($can_delete) {
-      $operations[] = l(t("Edit"), 'admin/structure/node_convert_templates/edit/' . $row['machine_name']);
-      $operations[] = l(t("Delete"), 'admin/structure/node_convert_templates/delete/' . $row['machine_name']);
+    if (!empty($row['machine_name'])) {
+      $operations['edit'] = array(
+        'title' => t("Edit"),
+        'href' => 'admin/structure/node_convert_templates/edit/' . $row['machine_name'],
+      );
+      $operations['delete'] = array(
+        'title' => t("Delete"),
+        'href' => 'admin/structure/node_convert_templates/delete/' . $row['machine_name'],
+      );
+      $operations['view'] = array(
+        'title' => t("View"),
+        'href' => 'admin/structure/node_convert_templates/' . $row['machine_name'],
+      );
     }
-    $rows[] = array($name, $row['machine_name'], $row['source_type'], $row['destination_type'], implode(' ', $operations));
+    $rows[] = array(
+      $name,
+      $row['source_type'],
+      $row['destination_type'],
+      array(
+        'data' => array(
+          '#type' => 'dropbutton',
+          '#links' => $operations,
+        ),
+      ),
+    );
   }
   $output = theme('table', array('header' => $headers, 'rows' => $rows));
 

@@ -301,15 +301,8 @@ function node_convert_convert_action_confirm($form, &$form_state) {
     $destination = isset($_GET['destination']) ? $_GET['destination'] : 'admin/content';
     $form['empty']['#markup'] = '<p>' . t('Return to the <a href="!url">content administration page</a>.', array('!url' => url($destination))) . '</p>';
     backdrop_set_message(t('No conversion templates have been set up. <a href="!url">Create a template</a>.', array(
-          '!url' => url('admin/structure/node_convert_templates/add',
-          array(
-            'query' => array(
-              'destination' => 'admin/content/convert',
-            ),
-          ),
-        ),
-      ),
-    ), 'error');
+      '!url' => url('admin/structure/node_convert_templates/add', array('query' => array('destination' => 'admin/content/convert'))),
+    )), 'error');
     return $form;
   }
   $form['template'] = array(

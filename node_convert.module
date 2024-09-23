@@ -169,7 +169,6 @@ function node_convert_action_info() {
       'label' => t("Convert content"),
       'type' => 'node',
       'callback' => 'node_convert_convert_action',
-      'file' => 'user.actions.inc',
       'weight' => 10,
     ),
   );

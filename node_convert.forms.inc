@@ -75,8 +75,10 @@ function node_convert_conversion_form($form, $form_state, $node) {
         ++$i;
         $options = array();
         $options['discard'] = 'discard';
-        $options[APPEND_TO_BODY] = t('Append to body');
-        $options[REPLACE_BODY] = t('Replace body');
+        if (isset($dest_fields['body'])) {
+          $options[APPEND_TO_BODY] = t('Append to body');
+          $options[REPLACE_BODY] = t('Replace body');
+        }
 
         // Insert destination type fields into $options that are of the same type as the source.
         foreach ($dest_fields as $dest_field_name => $dest_value) {

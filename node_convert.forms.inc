@@ -29,20 +29,20 @@ function node_convert_conversion_form($form, $form_state, $node) {
   /* Form steps */
   if ($op == 'choose_destination_type') {
     $type = node_type_get_name($node);
-    // Remember current node type, used in theme_ function
+    // Remember current node type, used in theme_ function.
     $form['current_type'] = array(
       '#markup' => $type,
     );
-    // Get available content types
+    // Get available content types.
     $types = node_convert_return_access_node_types('to');
     if ($types != FALSE) {
       $key = array_search($form['current_type']['#markup'], $types);
-      // Delete the current content type from the list
+      // Delete the current content type from the list.
       if ($key !== FALSE) {
         unset($types[$key]);
       }
       $options = $types;
-      // Populate the select with possible content types
+      // Populate the select with possible content types.
       $form['destination_type'] = array(
         '#type' => 'select',
         '#options' => $options,
@@ -50,7 +50,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
       );
     }
     else {
-      // Just used as a message, not sure if it's the best implementation
+      // Just used as a message, not sure if it's the best implementation.
       $form['destination_type'] = array(
         '#markup' => t("You don't have access to any node types."),
       );
@@ -61,14 +61,14 @@ function node_convert_conversion_form($form, $form_state, $node) {
     // Get source type fields
     $source_fields = field_info_instances('node', $node->type);
     $fields_info = field_info_fields();
-    // In case there are no fields, just convert the node type
+    // In case there are no fields, just convert the node type.
     if (count($source_fields) == 0) {
       $no_fields = TRUE;
     }
-    // Otherwise
+    // Otherwise.
     else {
       $no_fields = FALSE;
-      // Get destination type fields
+      // Get destination type fields.
       $dest_fields = field_info_instances('node', $form_state['storage']['destination_type']);
       $i = 0;
       foreach ($source_fields as $source_field_name => $source_field) {
@@ -87,7 +87,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
             $options[$dest_value['field_name']] = $dest_value['field_name'];
           }
         }
-        // Remember the source fields to be converted
+        // Remember the source fields to be converted.
         $form['source_field_' . $i] = array(
           '#type' => 'value',
           '#value' => $source_field['field_name'],
@@ -108,7 +108,7 @@ function node_convert_conversion_form($form, $form_state, $node) {
           '#title' => check_plain($source_field['field_name']) . " " . t("should be inserted into"),
         );
 
-        // Print the current value of the source field
+        // Print the current value of the source field.
         $temp_value = node_convert_format_field_value($node, $fields_info[$source_field_name]);
         $form['container_' . $i]['current_field_value_' . $i] = array(
           '#type' => 'item',
@@ -163,13 +163,13 @@ function node_convert_conversion_form_validate($form, &$form_state) {
  * Submit callback for converting a form.
  */
 function node_convert_conversion_form_submit($form, &$form_state) {
-  // Remember the destination type
+  // Remember the destination type.
   if ($form_state['values']['step'] == 'choose_destination_type') {
     $form_state['rebuild'] = TRUE;
     $form_state['storage']['destination_type'] = $form_state['values']['destination_type'];
   }
   elseif ($form_state['values']['step'] == 'choose_destination_fields') {
-    // Information needed in the convert process: nid, vid, source type, destination type
+    // Information needed in the convert process: nid, vid, source type, destination type.
     $dest_node_type = $form_state['storage']['destination_type'];
     $node = $form_state['values']['node'];
     $nid = $node->nid;
@@ -181,8 +181,8 @@ function node_convert_conversion_form_submit($form, &$form_state) {
     $dest_fields = array();
     if ($no_fields == FALSE) {
       for ($i = 1; $i <= $number_of_fields; $i++) {
-        $source_fields[] = $form_state['values']['source_field_' . $i]; //  Source fields
-        $dest_fields[] = $form_state['values']['dest_field_' . $i]; // Destination fields
+        $source_fields[] = $form_state['values']['source_field_' . $i]; // Source fields.
+        $dest_fields[] = $form_state['values']['dest_field_' . $i]; // Destination fields.
       }
     }
     if (!empty($form['hook_options'])) {
@@ -194,7 +194,7 @@ function node_convert_conversion_form_submit($form, &$form_state) {
     $result = node_convert_node_convert($nid, $dest_node_type, $source_fields, $dest_fields, $no_fields, $hook_options);
     // We display errors if any, or the default success message.
     node_convert_messages($result, array('nid' => $nid));
-    // We clear the storage so redirect works
+    // We clear the storage so redirect works.
     $form_state['storage'] = array();
     $form_state['redirect'] = "node/" . $nid;
   }
